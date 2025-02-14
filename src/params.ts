@@ -40,7 +40,7 @@ export function getParams(): IParams {
     params.orgId = process.env.ORGANIZATION_ID as string
     params.source = process.env.source as string
     params.sources = process.env.SOURCES as string
-    params.dashscopeApikey = process.env.dashScopeToken as string
+    params.dashscopeApikey = process.env.dashscopeApikey as string
     params.modelName = process.env.modelName as string
     return params
 }

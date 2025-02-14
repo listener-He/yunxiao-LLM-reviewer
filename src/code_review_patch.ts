@@ -31,13 +31,14 @@ export class CodeReviewPatches {
   }
 }
 
-export class patchDiff {
+export class PatchDiff {
   diff!: string
   oldPath!: string
+  newPath!: string
   deletedFile!: boolean
   binary!: boolean
 }
 
 export class CompareResult {
-  diffs!: patchDiff[]
+  diffs!: PatchDiff[]
 }

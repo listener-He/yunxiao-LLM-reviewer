@@ -4,5 +4,6 @@ export default class CodeSource {
   data!: {
     codeupMrLocalId: number
     projectId: number
+    repo: string
   }
 }

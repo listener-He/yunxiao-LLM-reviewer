@@ -4,6 +4,7 @@ kind: DefaultJob
 id: Command_5ebbc0408123212b59d58347
 name: Command_5ebbc0408123212b59d58347
 description: 使用大模型来对codeup的merge request进行review，并自动提交评论
+helpUrl: https://your-git-repo.com/your-step-namespace/step-repo
 execution:
   executor: node
   main: dist/index.js

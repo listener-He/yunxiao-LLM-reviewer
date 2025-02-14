@@ -6,6 +6,29 @@ require('./sourcemap-register.js');/******/ (() => { // webpackBootstrap
 
 "use strict";
 
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || function (mod) {
+    if (mod && mod.__esModule) return mod;
+    var result = {};
+    if (mod != null) for (var k in mod) if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
+    __setModuleDefault(result, mod);
+    return result;
+};
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
     function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
     return new (P || (P = Promise))(function (resolve, reject) {
@@ -19,82 +42,77 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
+const code_review_patch_1 = __nccwpck_require__(66087);
 const codeup_client_1 = __importDefault(__nccwpck_require__(25007));
 const llm_chat_1 = __nccwpck_require__(49251);
-// const token = 'pt-tbhK9D5FEIP8fsBKJg8TcUNV_9297bf89-803c-40f3-a5f8-82040559dbbc';
-// const organizationId = '5ebbc0408123212b59d58347'; // 替换为实际的 organizationId
-// ENGINE_GLOBAL_PARAM_ORGANIZATION_ID
-// const organizationId = params.orgId
+const step = __importStar(__nccwpck_require__(31954));
 const codeReview = (params) => __awaiter(void 0, void 0, void 0, function* () {
-    var _a, _b;
     const source = params.getCurrentSourceWithMr();
-    const repositoryId = (_a = source === null || source === void 0 ? void 0 : source.data) === null || _a === void 0 ? void 0 : _a.projectId;
-    const localId = (_b = source === null || source === void 0 ? void 0 : source.data) === null || _b === void 0 ? void 0 : _b.codeupMrLocalId;
-    const client = new codeup_client_1.default(params.yunxiaoToken, params.orgId, repositoryId, localId);
-    try {
-        // const patches: CodeReviewPatch[] = await client.getDiffPatches()
-        // const crPatches = new CodeReviewPatches(patches)
-        // const compareResult: CompareResult = await client.getDiff(crPatches.fromCommitId(), crPatches.toCommitId());
-        // console.log('Diff data between last two patches:', compareResult);
-        // console.log('Will review file diffs one by one, and write comment to MR')
-        const llmChat = new llm_chat_1.Chat(params.llmApikey, params.modelName);
-        const result = yield llmChat.reviewCode(`--- a/components/config-provider/context.ts
-+++ b/components/config-provider/context.ts
-@@ -23,8 +23,9 @@ import type { ListItemProps } from '../list';
- import type { Locale } from '../locale';
- import type { MentionsProps } from '../mentions';
- import type { MenuProps } from '../menu';
-+import type { ArgsProps as MessageProps } from '../message';
- import type { ModalProps } from '../modal';
--import type { ArgsProps } from '../notification/interface';
-+import type { ArgsProps as NotificationProps } from '../notification';
- import type { PaginationProps } from '../pagination';
- import type { PopconfirmProps } from '../popconfirm';
- import type { PopoverProps } from '../popover';
-@@ -175,8 +176,10 @@ export type TextAreaConfig = ComponentStyleConfig &
- export type ButtonConfig = ComponentStyleConfig &
-   Pick<ButtonProps, 'classNames' | 'styles' | 'autoInsertSpace'>;
-
-+export type MessageConfig = ComponentStyleConfig & Pick<MessageProps, 'classNames' | 'styles'>;
-+
- export type NotificationConfig = ComponentStyleConfig &
--  Pick<ArgsProps, 'closeIcon' | 'classNames' | 'styles'>;
-+  Pick<NotificationProps, 'closeIcon' | 'classNames' | 'styles'>;
-
- export type TagConfig = ComponentStyleConfig &
-   Pick<TagProps, 'closeIcon' | 'closable' | 'classNames' | 'styles'>;
-@@ -319,7 +322,7 @@ export interface ConfigComponentProps {
-   switch?: ComponentStyleConfig;
-   transfer?: TransferConfig;
-   avatar?: ComponentStyleConfig;
--  message?: ComponentStyleConfig;
-+  message?: MessageConfig;
-   tag?: TagConfig;
-   table?: TableConfig;
-   card?: CardConfig;`);
-        console.log(result);
-        // for(const diff of compareResult.diffs) {
-        //   if(diff.binary || diff.deletedFile) {
-        //     console.log(`${diff.oldPath} is deleted or a binary file, no need to review`)
-        //     continue
-        //   }
-        //   const result = await llmChat.reviewCode(diff.diff)
-        //   if(Array.isArray(result)) {
-        //     const reviewResults = result as ReviewResult[]
-        //     for(const r of reviewResults) {
-        //       await client.commentOnMR(r)
-        //     }
-        //   } else {
-        //     await client.commentOnMR(result)
-        //   }
-        // }
+    if (!source) {
+        step.info('Repository in current folder is not triggered by MergeRequest. Skip');
+        return;
     }
-    catch (error) {
-        console.error('Error:', error);
+    const mrClient = new codeup_client_1.default(params.yunxiaoToken, params.orgId, source);
+    const patches = yield mrClient.getDiffPatches();
+    const crPatches = new code_review_patch_1.CodeReviewPatches(patches);
+    const compareResult = yield mrClient.getDiff(crPatches.fromCommitId(), crPatches.toCommitId());
+    step.info(`Diff data between last two patches:\n ${compareResult.diffs.map(d => d.diff).join("\n")}`);
+    step.info(`Will review file diffs one by one, and comment to this MR: ${mrClient.getMRUrl()}`);
+    const dashscopeChat = new llm_chat_1.Chat(params.dashscopeApikey, params.modelName);
+    for (const diff of compareResult.diffs) {
+        if (diff.binary || diff.deletedFile) {
+            step.info(`${diff.oldPath} is deleted or a binary file, no need to review`);
+            continue;
+        }
+        const result = yield dashscopeChat.reviewCode(diff);
+        for (const r of result) {
+            yield mrClient.commentOnMR(r);
+        }
     }
 });
 exports["default"] = codeReview;
 //# sourceMappingURL=code_review.js.map
+
+/***/ }),
+
+/***/ 66087:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.CompareResult = exports.PatchDiff = exports.CodeReviewPatches = exports.CodeReviewPatch = void 0;
+class CodeReviewPatch {
+}
+exports.CodeReviewPatch = CodeReviewPatch;
+class CodeReviewPatches {
+    constructor(patches) {
+        this.patches = patches;
+    }
+    fromCommitId() {
+        if (this.patches.length === 2) {
+            return this.mergeTarget().commitId;
+        }
+        return this.mergeSourcesInVersionOrderDesc()[1].commitId;
+    }
+    toCommitId() {
+        return this.mergeSourcesInVersionOrderDesc()[0].commitId;
+    }
+    mergeTarget() {
+        return this.patches.filter(p => p.relatedMergeItemType === 'MERGE_TARGET')[0];
+    }
+    mergeSourcesInVersionOrderDesc() {
+        return this.patches.filter(p => p.relatedMergeItemType === 'MERGE_SOURCE').sort((a, b) => a.versionNo - b.versionNo).reverse();
+    }
+}
+exports.CodeReviewPatches = CodeReviewPatches;
+class PatchDiff {
+}
+exports.PatchDiff = PatchDiff;
+class CompareResult {
+}
+exports.CompareResult = CompareResult;
+//# sourceMappingURL=code_review_patch.js.map
 
 /***/ }),
 
@@ -103,6 +121,29 @@ exports["default"] = codeReview;
 
 "use strict";
 
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || function (mod) {
+    if (mod && mod.__esModule) return mod;
+    var result = {};
+    if (mod != null) for (var k in mod) if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
+    __setModuleDefault(result, mod);
+    return result;
+};
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
     function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
     return new (P || (P = Promise))(function (resolve, reject) {
@@ -117,13 +158,16 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 const axios_1 = __importDefault(__nccwpck_require__(88757));
+const step = __importStar(__nccwpck_require__(31954));
 class CodeupClient {
-    constructor(token, orgId, repoId, mrLocalId) {
+    constructor(token, orgId, source) {
+        var _a, _b;
         this.baseUrl = 'https://openapi-rdc.aliyuncs.com/oapi/v1/codeup';
         this.token = token;
         this.orgId = orgId;
-        this.repoId = repoId;
-        this.mrLocalId = mrLocalId;
+        this.repoUrl = source.data.repo;
+        this.repoId = (_a = source === null || source === void 0 ? void 0 : source.data) === null || _a === void 0 ? void 0 : _a.projectId;
+        this.mrLocalId = (_b = source === null || source === void 0 ? void 0 : source.data) === null || _b === void 0 ? void 0 : _b.codeupMrLocalId;
     }
     // 获取 diff patches
     getDiffPatches() {
@@ -164,28 +208,27 @@ class CodeupClient {
     }
     commentOnMR(r) {
         return __awaiter(this, void 0, void 0, function* () {
-            if (typeof (r) === 'string') {
-                const url = `${this.baseUrl}/organizations/${this.orgId}/repositories/${this.repoId}/changeRequests/${this.mrLocalId}/review`;
-                try {
-                    const comment = `本评论来自大模型\n${r}`;
-                    const response = yield axios_1.default.post(url, {
-                        reviewComment: comment
-                    }, {
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'x-yunxiao-token': this.token,
-                        },
-                    });
-                    if (response.status !== 200) {
-                        console.log('failed to review merge request', response.data);
-                    }
-                }
-                catch (error) {
-                    console.error('Error fetching diff patches:', error);
-                    throw error; // 抛出错误，以便调用者处理
-                }
+            const url = `${this.baseUrl}/organizations/${this.orgId}/repositories/${this.repoId}/changeRequests/${this.mrLocalId}/review`;
+            try {
+                const comment = `【本评论来自大模型】\n${r.comment}`;
+                yield axios_1.default.post(url, {
+                    reviewComment: comment
+                }, {
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'x-yunxiao-token': this.token,
+                    },
+                });
+                step.info(`Has Commented on ${r.fileName}:\n${r.comment}`);
+            }
+            catch (error) {
+                console.error('Error fetching diff patches:', error);
+                throw error; // 抛出错误，以便调用者处理
             }
         });
+    }
+    getMRUrl() {
+        return `${this.repoUrl.replace('.git', '')}/change/${this.mrLocalId}`;
     }
 }
 exports["default"] = CodeupClient;
@@ -267,6 +310,29 @@ runStep()
 
 "use strict";
 
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || function (mod) {
+    if (mod && mod.__esModule) return mod;
+    var result = {};
+    if (mod != null) for (var k in mod) if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
+    __setModuleDefault(result, mod);
+    return result;
+};
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
     function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
     return new (P || (P = Promise))(function (resolve, reject) {
@@ -282,6 +348,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.Chat = exports.ReviewResult = void 0;
 const openai_1 = __importDefault(__nccwpck_require__(60047));
+const step = __importStar(__nccwpck_require__(31954));
 class ReviewResult {
 }
 exports.ReviewResult = ReviewResult;
@@ -297,7 +364,7 @@ class Chat {
     reviewCode(diff) {
         return __awaiter(this, void 0, void 0, function* () {
             // const prompt = '下面是一个git diff，请从代码风格和代码正确性的角度出发，给出评论，直接给出json数组格式的答案，不要输出任何别的东西。json数组中的每个元素包含三个字段：fileName lineNumber comment\n' + diff
-            const prompt = '下面是一个代码diff，请从代码风格和代码正确性的角度，用纯文本的格式直接给出改进意见，无需添加任何前置说明\n' + diff;
+            const prompt = '下面是一个代码diff，请从代码风格和代码正确性的角度，用纯文本的格式直接给出改进意见，无需添加任何前置说明\n' + diff.diff;
             const completion = yield this.openai.chat.completions.create({
                 model: this.modelName,
                 messages: [
@@ -309,8 +376,11 @@ class Chat {
                 return JSON.parse(completion.choices[0].message.content);
             }
             catch (err) {
-                console.log('cannot parse result as array, return original content');
-                return content;
+                step.info('cannot parse result as array, return original content');
+                const result = new ReviewResult();
+                result.comment = content;
+                result.fileName = diff.newPath;
+                return [result];
             }
         });
     }
@@ -354,12 +424,12 @@ function getParams() {
     params.workSpace = process_1.default.env.WORK_SPACE;
     params.projectDir = process_1.default.env.PROJECT_DIR;
     params.buildJobID = Number(process_1.default.env.BUILD_JOB_ID);
-    params.yunxiaoToken = process_1.default.env.YUNXIAO_TOKEN;
-    params.orgId = process_1.default.env.ENGINE_GLOBAL_PARAM_ORGANIZATION_ID;
+    params.yunxiaoToken = process_1.default.env.yunxiaoToken;
+    params.orgId = process_1.default.env.ORGANIZATION_ID;
     params.source = process_1.default.env.source;
     params.sources = process_1.default.env.SOURCES;
-    params.llmApikey = process_1.default.env.LLM_API_KEY;
-    params.modelName = process_1.default.env.MODEL_NAME;
+    params.dashscopeApikey = process_1.default.env.dashscopeApikey;
+    params.modelName = process_1.default.env.modelName;
     return params;
 }
 exports.getParams = getParams;
