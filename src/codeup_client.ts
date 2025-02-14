@@ -58,7 +58,13 @@ class CodeupClient {
     async commentOnMR(r: ReviewResult) {
         const url = `${this.baseUrl}/organizations/${this.orgId}/repositories/${this.repoId}/changeRequests/${this.mrLocalId}/review`;
         try {
-            const comment = `【本评论来自大模型】\n${r.comment}`
+            const escapedComment = r.comment
+                        .replace(/&/g, "&amp;")
+                        .replace(/</g, "&lt;")
+                        .replace(/>/g, "&gt;")
+                        .replace(/"/g, "&quot;")
+                        .replace(/'/g, "&apos;");
+            const comment = `【本评论来自大模型】\n${escapedComment}`
             await axios.post(url, {
                 reviewComment: comment
             }, {
@@ -68,7 +74,7 @@ class CodeupClient {
                 },
             });
 
-            step.info(`Has Commented on ${r.fileName}:\n${r.comment}`)
+            step.info(`Has Commented on ${r.fileName}:\n${escapedComment}`)
         } catch (error) {
             console.error('Error fetching diff patches:', error);
             throw error; // 抛出错误，以便调用者处理

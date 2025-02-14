@@ -210,7 +210,13 @@ class CodeupClient {
         return __awaiter(this, void 0, void 0, function* () {
             const url = `${this.baseUrl}/organizations/${this.orgId}/repositories/${this.repoId}/changeRequests/${this.mrLocalId}/review`;
             try {
-                const comment = `【本评论来自大模型】\n${r.comment}`;
+                const escapedComment = r.comment
+                    .replace(/&/g, "&amp;")
+                    .replace(/</g, "&lt;")
+                    .replace(/>/g, "&gt;")
+                    .replace(/"/g, "&quot;")
+                    .replace(/'/g, "&apos;");
+                const comment = `【本评论来自大模型】\n${escapedComment}`;
                 yield axios_1.default.post(url, {
                     reviewComment: comment
                 }, {
@@ -219,7 +225,7 @@ class CodeupClient {
                         'x-yunxiao-token': this.token,
                     },
                 });
-                step.info(`Has Commented on ${r.fileName}:\n${r.comment}`);
+                step.info(`Has Commented on ${r.fileName}:\n${escapedComment}`);
             }
             catch (error) {
                 console.error('Error fetching diff patches:', error);
