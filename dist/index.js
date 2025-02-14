@@ -364,7 +364,7 @@ class Chat {
     reviewCode(diff) {
         return __awaiter(this, void 0, void 0, function* () {
             // const prompt = '下面是一个git diff，请从代码风格和代码正确性的角度出发，给出评论，直接给出json数组格式的答案，不要输出任何别的东西。json数组中的每个元素包含三个字段：fileName lineNumber comment\n' + diff
-            const prompt = '下面是一个代码diff，请从代码风格和代码正确性的角度，用纯文本的格式直接给出改进意见，无需添加任何前置说明\n' + diff.diff;
+            const prompt = '下面是一个代码diff，请从代码风格和代码正确性的角度，用纯文本（非markdown）的格式直接给出改进意见，无需添加任何前置说明\n' + diff.diff;
             const completion = yield this.openai.chat.completions.create({
                 model: this.modelName,
                 messages: [

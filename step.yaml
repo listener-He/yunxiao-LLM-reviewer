@@ -25,6 +25,6 @@ items:
     type: input
     description: 可以引用私密配置项 ${YUNXIAO_TOKEN}
   - label: 百炼APIKey
-    name: dashScopeToken
+    name: dashscopeApikey
     type: input
     description: 可以引用私密配置项 ${DASHSCOPE_TOKEN}
