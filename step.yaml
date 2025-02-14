@@ -1,0 +1,29 @@
+---
+apiVersion: v2
+kind: DefaultJob
+id: Command_5ebbc0408123212b59d58347
+name: Command_5ebbc0408123212b59d58347
+description: 使用大模型来对codeup的merge request进行review，并自动提交评论
+execution:
+  executor: node
+  main: dist/index.js
+items:
+  - label: 模型名称
+    name: modelName
+    type: dropdown
+    datasource:
+    - label: deepseek-r1
+      value: deepseek-r1
+    - label: deepseek-v3
+      value: deepseek-v3
+    - label: qwen-max
+      value: qwen-max
+    value: deepseek-v3
+  - label: 云效token
+    name: yunxiaoToken
+    type: input
+    description: 可以引用私密配置项 ${YUNXIAO_TOKEN}
+  - label: 百炼APIKey
+    name: dashScopeToken
+    type: input
+    description: 可以引用私密配置项 ${DASHSCOPE_TOKEN}
