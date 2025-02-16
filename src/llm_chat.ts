@@ -24,9 +24,9 @@ export class Chat {
     this.modelName = modelName
   }
 
-  async reviewCode(diff: PatchDiff): Promise<ReviewResult[]> {
-    // const prompt = '下面是一个git diff，请从代码风格和代码正确性的角度出发，给出评论，直接给出json数组格式的答案，不要输出任何别的东西。json数组中的每个元素包含三个字段：fileName lineNumber comment\n' + diff
-    const prompt = '下面是一个代码diff，请从代码风格和代码正确性的角度，用纯文本（非markdown）的格式直接给出改进意见，无需添加任何前置说明\n' + diff.diff
+  async reviewCode(diff: string): Promise<ReviewResult[]> {
+    // const prompt = '下面是一个代码diff，请找出明显的代码风格问题、工程实践问题，和代码正确性问题，直接给出json数组格式的答案，不要输出任何别的东西。json数组中的每个元素包含三个字段：fileName lineNumber comment\n' + diff
+    const prompt = '下面是一个代码diff，请找出明显的代码风格问题、工程实践问题，和代码正确性问题，用纯文本（非markdown）的格式直接给出改进意见，无需添加任何前置说明\n' + diff
     const completion: ChatCompletion = await this.openai.chat.completions.create({
       model: this.modelName,
       messages: [
@@ -40,7 +40,6 @@ export class Chat {
       step.info('cannot parse result as array, return original content')
       const result = new ReviewResult()
       result.comment = content
-      result.fileName = diff.newPath
       return [result]
     }
   }

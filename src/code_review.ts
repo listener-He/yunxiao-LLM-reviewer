@@ -18,17 +18,14 @@ const codeReview = async (params: IParams) => {
   const compareResult: CompareResult = await mrClient.getDiff(crPatches.fromCommitId(), crPatches.toCommitId());
   step.info(`Diff data between last two patches:\n ${compareResult.diffs.map(d => d.diff).join("\n")}`);
 
-  step.info(`Will review file diffs one by one, and comment to this MR: ${mrClient.getMRUrl()}`)
+  step.info(`Will review file diffs, and comment to this MR: ${mrClient.getMRUrl()}`)
   const dashscopeChat = new Chat(params.dashscopeApikey, params.modelName)
-  for(const diff of compareResult.diffs) {
-    if(diff.binary || diff.deletedFile) {
-      step.info(`${diff.oldPath} is deleted or a binary file, no need to review`)
-      continue
-    }
-    const result: ReviewResult[] = await dashscopeChat.reviewCode(diff)
-    for(const r of result) {
-      await mrClient.commentOnMR(r)
-    }
+  const combinedDiff = compareResult.diffs
+    .filter(d => !d.binary && !d.deletedFile)
+    .map(d => d.diff).join("\n")
+  const result: ReviewResult[] = await dashscopeChat.reviewCode(combinedDiff)
+  for(const r of result) {
+    await mrClient.commentOnMR(r)
   }
 }
 

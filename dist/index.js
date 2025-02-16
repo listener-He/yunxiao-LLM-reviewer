@@ -57,18 +57,25 @@ const codeReview = (params) => __awaiter(void 0, void 0, void 0, function* () {
     const crPatches = new code_review_patch_1.CodeReviewPatches(patches);
     const compareResult = yield mrClient.getDiff(crPatches.fromCommitId(), crPatches.toCommitId());
     step.info(`Diff data between last two patches:\n ${compareResult.diffs.map(d => d.diff).join("\n")}`);
-    step.info(`Will review file diffs one by one, and comment to this MR: ${mrClient.getMRUrl()}`);
+    step.info(`Will review file diffs, and comment to this MR: ${mrClient.getMRUrl()}`);
     const dashscopeChat = new llm_chat_1.Chat(params.dashscopeApikey, params.modelName);
-    for (const diff of compareResult.diffs) {
-        if (diff.binary || diff.deletedFile) {
-            step.info(`${diff.oldPath} is deleted or a binary file, no need to review`);
-            continue;
-        }
-        const result = yield dashscopeChat.reviewCode(diff);
-        for (const r of result) {
-            yield mrClient.commentOnMR(r);
-        }
+    const combinedDiff = compareResult.diffs
+        .filter(d => !d.binary && !d.deletedFile)
+        .map(d => d.diff).join("\n");
+    const result = yield dashscopeChat.reviewCode(combinedDiff);
+    for (const r of result) {
+        yield mrClient.commentOnMR(r);
     }
+    // for(const diff of compareResult.diffs) {
+    //   if(diff.binary || diff.deletedFile) {
+    //     step.info(`${diff.oldPath} is deleted or a binary file, no need to review`)
+    //     continue
+    //   }
+    //   const result: ReviewResult[] = await dashscopeChat.reviewCode(diff)
+    //   for(const r of result) {
+    //     await mrClient.commentOnMR(r)
+    //   }
+    // }
 });
 exports["default"] = codeReview;
 //# sourceMappingURL=code_review.js.map
@@ -217,14 +224,14 @@ class CodeupClient {
                     .replace(/"/g, "&quot;")
                     .replace(/'/g, "&apos;");
                 const comment = `【本评论来自大模型】\n${escapedComment}`;
-                yield axios_1.default.post(url, {
-                    reviewComment: comment
-                }, {
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'x-yunxiao-token': this.token,
-                    },
-                });
+                // await axios.post(url, {
+                //     reviewComment: comment
+                // }, {
+                //     headers: {
+                //         'Content-Type': 'application/json',
+                //         'x-yunxiao-token': this.token,
+                //     },
+                // });
                 step.info(`Has Commented on ${r.fileName}:\n${escapedComment}`);
             }
             catch (error) {
@@ -370,7 +377,7 @@ class Chat {
     reviewCode(diff) {
         return __awaiter(this, void 0, void 0, function* () {
             // const prompt = '下面是一个git diff，请从代码风格和代码正确性的角度出发，给出评论，直接给出json数组格式的答案，不要输出任何别的东西。json数组中的每个元素包含三个字段：fileName lineNumber comment\n' + diff
-            const prompt = '下面是一个代码diff，请从代码风格和代码正确性的角度，用纯文本（非markdown）的格式直接给出改进意见，无需添加任何前置说明\n' + diff.diff;
+            const prompt = '下面是一个代码diff，请找出明显的代码风格问题、工程实践问题，和代码正确性问题，用纯文本（非markdown）的格式直接给出改进意见，无需添加任何前置说明\n' + diff;
             const completion = yield this.openai.chat.completions.create({
                 model: this.modelName,
                 messages: [
@@ -385,7 +392,6 @@ class Chat {
                 step.info('cannot parse result as array, return original content');
                 const result = new ReviewResult();
                 result.comment = content;
-                result.fileName = diff.newPath;
                 return [result];
             }
         });
