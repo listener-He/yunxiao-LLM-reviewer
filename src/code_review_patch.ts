@@ -53,6 +53,84 @@ export class PatchDiff {
   binary!: boolean
 }
 
+export class Hunk {
+  fileName: string;
+  lineNumber: number;
+  diff: string;
+  
+  constructor(fileName: string, lineNumber: number, diff: string) {
+    this.fileName = fileName
+    this.lineNumber = lineNumber
+    this.diff = diff
+  }
+}
+
+const hunkStartReg = /@@ -(\d+),\d+ \+(\d+),\d+ @@/
+
 export class CompareResult {
-  diffs!: PatchDiff[]
+  diffs: PatchDiff[]
+
+  constructor(diffs: PatchDiff[]) {
+    this.diffs = diffs;
+  }
+
+  getCombinedDiff(): string {
+    return this.diffs
+    .filter(d => !d.binary && !d.deletedFile)
+    .map(d => d.diff).join("\n")
+  }
+
+  getHunks(): Hunk[] {
+    return this.diffs.flatMap(diff => {
+      const lines = diff.diff.split('\n')
+      const fileName = lines[0].replace('--- a/', '')
+      const hunkHead = lines[0] + '\n' + lines[1]
+      return this.getHunksFromDiff(hunkHead, fileName, lines)
+    })
+  }
+
+  getHunksFromDiff(hunkHead: string, fileName: string, lines: string[]): Hunk[] {
+    const hunks: Hunk[] = [];
+
+    let lineNumber = 2
+    while(lineNumber < lines.length) {
+      if(lines[lineNumber].match(hunkStartReg)) {
+        const startLine = this.getTargetFileHunkStartLine(lineNumber, lines)
+        const hunkDiff = this.getHunkDiff(hunkHead, lineNumber, lines)
+        hunks.push(new Hunk(fileName, startLine, hunkDiff));
+      }
+      lineNumber++
+    }
+    return hunks
+  }
+
+  getTargetFileHunkStartLine(lineNumber: number, lines: string[]) {
+    const hunkMatch = lines[lineNumber].match(hunkStartReg);
+    let hunkStartingNumber = parseInt(hunkMatch![2], 10);
+    lineNumber++
+    
+    while(lineNumber < lines.length && 
+      !(lines[lineNumber].match(hunkStartReg)) &&
+      !lines[lineNumber].startsWith('+')
+    ) {
+      if(!lines[lineNumber].startsWith('-')) {
+        hunkStartingNumber++
+      }
+      lineNumber++
+    }
+    return hunkStartingNumber
+  }
+
+  getHunkDiff(hunkHead: string, lineNumber: number, lines: string[]) {
+    let hunkDiffLines = [hunkHead, lines[lineNumber]]
+
+    lineNumber++
+    while(lineNumber < lines.length && 
+      !(lines[lineNumber].match(hunkStartReg))
+    ) {
+      hunkDiffLines.push(lines[lineNumber])
+      lineNumber++
+    }
+    return hunkDiffLines.join("\n")
+  }
 }

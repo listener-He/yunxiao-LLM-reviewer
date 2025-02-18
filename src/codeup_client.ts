@@ -2,6 +2,7 @@ import axios, { AxiosResponse } from 'axios';
 import * as step from '@flow-step/step-toolkit'
 import { ReviewResult } from './llm_chat';
 import CodeSource from './code_source';
+import { CompareResult } from './code_review_patch';
 
 class CodeupClient {
     private baseUrl: string;
@@ -38,7 +39,7 @@ class CodeupClient {
         }
     }
 
-    public async getDiff(fromCommitId: string, toCommitId: string): Promise<any> {
+    public async getDiff(fromCommitId: string, toCommitId: string): Promise<CompareResult> {
         const url = `${this.baseUrl}/organizations/${this.orgId}/repositories/${this.repoId}/compares?from=${fromCommitId}&to=${toCommitId}`;
         try {
             const response: AxiosResponse = await axios.get(url, {
@@ -48,7 +49,7 @@ class CodeupClient {
                 },
             });
 
-            return response.data; // 返回响应数据
+            return new CompareResult(response.data.diffs) // 返回响应数据
         } catch (error) {
             console.error('Error fetching diff patches:', error);
             throw error; // 抛出错误，以便调用者处理
@@ -82,7 +83,7 @@ class CodeupClient {
                 },
             });
 
-            step.info(`Has Commented on ${r.fileName}:\n${escapedComment}`)
+            step.info(`Has Commented on ${r.fileName}, line: ${r.lineNumber}:\n${escapedComment}`)
         } catch (error) {
             console.error('Error fetching diff patches:', error);
             throw error; // 抛出错误，以便调用者处理

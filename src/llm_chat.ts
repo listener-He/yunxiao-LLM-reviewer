@@ -1,11 +1,18 @@
 import OpenAI from "openai";
 import { ChatCompletion } from "openai/resources";
-import * as step from '@flow-step/step-toolkit'
+import { CompareResult, Hunk } from "./code_review_patch";
 
 export class ReviewResult {
-  fileName!: string
-  lineNumber?: number
-  comment!: string
+  fileName: string
+  lineNumber: number
+  comment: string
+  constructor(fileName: string,
+    lineNumber: number,
+    comment: string) {
+      this.fileName = fileName
+      this.lineNumber = lineNumber
+      this.comment = comment
+    }
 }
 
 export class Chat {
@@ -23,25 +30,21 @@ export class Chat {
     this.modelName = modelName
   }
 
-  async reviewCode(diff: string): Promise<ReviewResult[]> {
-    const prompt = '下面是一段代码Git Diff。请找出明显的代码风格问题、工程实践问题，和代码正确性问题。用纯文本（非markdown）的json数组格式，针对每个hunk给出改进意见（如果有），无需添加任何前置说明。json数组中的每个元素包含三个字段：fileName lineNumber comment。注意lineNumber应该是有修改的行，而非未修改的行\n' + diff
+  async reviewCode(combinedDiff: string, hunk: Hunk): Promise<ReviewResult | null> {
+    const prompt = `下面是一段代码Git Diff\n${combinedDiff}\n下面是这段Diff中的一部分局部Diff\n${hunk.diff}\n请结合完整的Diff，在上面的局部Diff中找出可能存在的问题，比如不良的代码风格、无用的代码，错误的逻辑等。用普通文本（非Markdown）直接说明存在的问题（不要加多余的前后缀内容）即可，没问题的部分不用说。如果没有任何问题，则回复'没问题'三个字`
     const completion: ChatCompletion = await this.openai.chat.completions.create({
       model: this.modelName,
       messages: [
           { role: "user", content: prompt }
       ],
       temperature: 0.2,
-      top_p: 0.1,
+      top_p: 0.2,
     })
     const content = completion.choices[0].message.content!
-    try {
-      return JSON.parse(content) as ReviewResult[]
-    } catch(err) {
-      step.info('cannot parse result as array, return original content')
-      const result = new ReviewResult()
-      result.comment = content
-      return [result]
+    if('没问题' === content) {
+      return null;
     }
+    return new ReviewResult(hunk.fileName, hunk.lineNumber, content)
   }
 }
 

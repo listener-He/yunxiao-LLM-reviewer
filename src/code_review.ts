@@ -16,16 +16,16 @@ const codeReview = async (params: IParams) => {
   const patches: CodeReviewPatch[] = await mrClient.getDiffPatches()
   const crPatches = new CodeReviewPatches(patches)
   const compareResult: CompareResult = await mrClient.getDiff(crPatches.fromCommitId(), crPatches.toCommitId());
-  step.info(`Diff data between last two patches:\n ${compareResult.diffs.map(d => d.diff).join("\n")}`);
-
+  step.info(`Diff data between last two patches:\n ${compareResult.getCombinedDiff()}`);
+  
   step.info(`Will review file diffs, and comment to this MR: ${mrClient.getMRUrl()}`)
   const dashscopeChat = new Chat(params.dashscopeApikey, params.modelName)
-  const combinedDiff = compareResult.diffs
-    .filter(d => !d.binary && !d.deletedFile)
-    .map(d => d.diff).join("\n")
-  const result: ReviewResult[] = await dashscopeChat.reviewCode(combinedDiff)
-  for(const r of result) {
-    await mrClient.commentOnMR(r, crPatches.fromPatchSetId(), crPatches.toPatchSetId())
+  for(const hunk of compareResult.getHunks()) {
+    const result = await dashscopeChat.reviewCode(compareResult.getCombinedDiff(), hunk)
+    if(!result) {
+      continue;
+    }
+    await mrClient.commentOnMR(result, crPatches.fromPatchSetId(), crPatches.toPatchSetId())
   }
 }
 

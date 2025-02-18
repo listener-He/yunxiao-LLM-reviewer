@@ -56,15 +56,15 @@ const codeReview = (params) => __awaiter(void 0, void 0, void 0, function* () {
     const patches = yield mrClient.getDiffPatches();
     const crPatches = new code_review_patch_1.CodeReviewPatches(patches);
     const compareResult = yield mrClient.getDiff(crPatches.fromCommitId(), crPatches.toCommitId());
-    step.info(`Diff data between last two patches:\n ${compareResult.diffs.map(d => d.diff).join("\n")}`);
+    step.info(`Diff data between last two patches:\n ${compareResult.getCombinedDiff()}`);
     step.info(`Will review file diffs, and comment to this MR: ${mrClient.getMRUrl()}`);
     const dashscopeChat = new llm_chat_1.Chat(params.dashscopeApikey, params.modelName);
-    const combinedDiff = compareResult.diffs
-        .filter(d => !d.binary && !d.deletedFile)
-        .map(d => d.diff).join("\n");
-    const result = yield dashscopeChat.reviewCode(combinedDiff);
-    for (const r of result) {
-        yield mrClient.commentOnMR(r, crPatches.fromPatchSetId(), crPatches.toPatchSetId());
+    for (const hunk of compareResult.getHunks()) {
+        const result = yield dashscopeChat.reviewCode(compareResult.getCombinedDiff(), hunk);
+        if (!result) {
+            continue;
+        }
+        yield mrClient.commentOnMR(result, crPatches.fromPatchSetId(), crPatches.toPatchSetId());
     }
 });
 exports["default"] = codeReview;
@@ -78,7 +78,7 @@ exports["default"] = codeReview;
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.CompareResult = exports.PatchDiff = exports.CodeReviewPatches = exports.CodeReviewPatch = void 0;
+exports.CompareResult = exports.Hunk = exports.PatchDiff = exports.CodeReviewPatches = exports.CodeReviewPatch = void 0;
 class CodeReviewPatch {
 }
 exports.CodeReviewPatch = CodeReviewPatch;
@@ -115,7 +115,69 @@ exports.CodeReviewPatches = CodeReviewPatches;
 class PatchDiff {
 }
 exports.PatchDiff = PatchDiff;
+class Hunk {
+    constructor(fileName, lineNumber, diff) {
+        this.fileName = fileName;
+        this.lineNumber = lineNumber;
+        this.diff = diff;
+    }
+}
+exports.Hunk = Hunk;
+const hunkStartReg = /@@ -(\d+),\d+ \+(\d+),\d+ @@/;
 class CompareResult {
+    constructor(diffs) {
+        this.diffs = diffs;
+    }
+    getCombinedDiff() {
+        return this.diffs
+            .filter(d => !d.binary && !d.deletedFile)
+            .map(d => d.diff).join("\n");
+    }
+    getHunks() {
+        return this.diffs.flatMap(diff => {
+            const lines = diff.diff.split('\n');
+            const fileName = lines[0].replace('--- a/', '');
+            const hunkHead = lines[0] + '\n' + lines[1];
+            return this.getHunksFromDiff(hunkHead, fileName, lines);
+        });
+    }
+    getHunksFromDiff(hunkHead, fileName, lines) {
+        const hunks = [];
+        let lineNumber = 2;
+        while (lineNumber < lines.length) {
+            if (lines[lineNumber].match(hunkStartReg)) {
+                const startLine = this.getTargetFileHunkStartLine(lineNumber, lines);
+                const hunkDiff = this.getHunkDiff(hunkHead, lineNumber, lines);
+                hunks.push(new Hunk(fileName, startLine, hunkDiff));
+            }
+            lineNumber++;
+        }
+        return hunks;
+    }
+    getTargetFileHunkStartLine(lineNumber, lines) {
+        const hunkMatch = lines[lineNumber].match(hunkStartReg);
+        let hunkStartingNumber = parseInt(hunkMatch[2], 10);
+        lineNumber++;
+        while (lineNumber < lines.length &&
+            !(lines[lineNumber].match(hunkStartReg)) &&
+            !lines[lineNumber].startsWith('+')) {
+            if (!lines[lineNumber].startsWith('-')) {
+                hunkStartingNumber++;
+            }
+            lineNumber++;
+        }
+        return hunkStartingNumber;
+    }
+    getHunkDiff(hunkHead, lineNumber, lines) {
+        let hunkDiffLines = [hunkHead, lines[lineNumber]];
+        lineNumber++;
+        while (lineNumber < lines.length &&
+            !(lines[lineNumber].match(hunkStartReg))) {
+            hunkDiffLines.push(lines[lineNumber]);
+            lineNumber++;
+        }
+        return hunkDiffLines.join("\n");
+    }
 }
 exports.CompareResult = CompareResult;
 //# sourceMappingURL=code_review_patch.js.map
@@ -165,6 +227,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 const axios_1 = __importDefault(__nccwpck_require__(88757));
 const step = __importStar(__nccwpck_require__(31954));
+const code_review_patch_1 = __nccwpck_require__(66087);
 class CodeupClient {
     constructor(token, orgId, source) {
         var _a, _b;
@@ -204,7 +267,7 @@ class CodeupClient {
                         'x-yunxiao-token': this.token,
                     },
                 });
-                return response.data; // 返回响应数据
+                return new code_review_patch_1.CompareResult(response.data.diffs); // 返回响应数据
             }
             catch (error) {
                 console.error('Error fetching diff patches:', error);
@@ -239,7 +302,7 @@ class CodeupClient {
                         'x-yunxiao-token': this.token,
                     },
                 });
-                step.info(`Has Commented on ${r.fileName}:\n${escapedComment}`);
+                step.info(`Has Commented on ${r.fileName}, line: ${r.lineNumber}:\n${escapedComment}`);
             }
             catch (error) {
                 console.error('Error fetching diff patches:', error);
@@ -330,29 +393,6 @@ runStep()
 
 "use strict";
 
-var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    var desc = Object.getOwnPropertyDescriptor(m, k);
-    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
-      desc = { enumerable: true, get: function() { return m[k]; } };
-    }
-    Object.defineProperty(o, k2, desc);
-}) : (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    o[k2] = m[k];
-}));
-var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
-    Object.defineProperty(o, "default", { enumerable: true, value: v });
-}) : function(o, v) {
-    o["default"] = v;
-});
-var __importStar = (this && this.__importStar) || function (mod) {
-    if (mod && mod.__esModule) return mod;
-    var result = {};
-    if (mod != null) for (var k in mod) if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
-    __setModuleDefault(result, mod);
-    return result;
-};
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
     function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
     return new (P || (P = Promise))(function (resolve, reject) {
@@ -368,8 +408,12 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.Chat = exports.ReviewResult = void 0;
 const openai_1 = __importDefault(__nccwpck_require__(60047));
-const step = __importStar(__nccwpck_require__(31954));
 class ReviewResult {
+    constructor(fileName, lineNumber, comment) {
+        this.fileName = fileName;
+        this.lineNumber = lineNumber;
+        this.comment = comment;
+    }
 }
 exports.ReviewResult = ReviewResult;
 class Chat {
@@ -381,27 +425,22 @@ class Chat {
         });
         this.modelName = modelName;
     }
-    reviewCode(diff) {
+    reviewCode(combinedDiff, hunk) {
         return __awaiter(this, void 0, void 0, function* () {
-            const prompt = '下面是一段代码Git Diff。请找出明显的代码风格问题、工程实践问题，和代码正确性问题。用纯文本（非markdown）的json数组格式，针对每个hunk给出改进意见（如果有），无需添加任何前置说明。json数组中的每个元素包含三个字段：fileName lineNumber comment。注意lineNumber应该是有修改的行，而非未修改的行\n' + diff;
+            const prompt = `下面是一段代码Git Diff\n${combinedDiff}\n下面是这段Diff中的一部分局部Diff\n${hunk.diff}\n请结合完整的Diff，在上面的局部Diff中找出可能存在的问题，比如不良的代码风格、无用的代码，错误的逻辑等。用普通文本（非Markdown）直接说明存在的问题（不要加多余的前后缀内容）即可，没问题的部分不用说。如果没有任何问题，则回复'没问题'三个字`;
             const completion = yield this.openai.chat.completions.create({
                 model: this.modelName,
                 messages: [
                     { role: "user", content: prompt }
                 ],
                 temperature: 0.2,
-                top_p: 0.1,
+                top_p: 0.2,
             });
             const content = completion.choices[0].message.content;
-            try {
-                return JSON.parse(content);
+            if ('没问题' === content) {
+                return null;
             }
-            catch (err) {
-                step.info('cannot parse result as array, return original content');
-                const result = new ReviewResult();
-                result.comment = content;
-                return [result];
-            }
+            return new ReviewResult(hunk.fileName, hunk.lineNumber, content);
         });
     }
 }
