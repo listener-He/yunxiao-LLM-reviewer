@@ -55,8 +55,8 @@ class CodeupClient {
         }
     }
 
-    async commentOnMR(r: ReviewResult) {
-        const url = `${this.baseUrl}/organizations/${this.orgId}/repositories/${this.repoId}/changeRequests/${this.mrLocalId}/review`;
+    async commentOnMR(r: ReviewResult, fromPatchSetId: string, toPatchSetId: string) {
+        const url = `${this.baseUrl}/organizations/${this.orgId}/repositories/${this.repoId}/changeRequests/${this.mrLocalId}/comments`;
         try {
             const escapedComment = r.comment
                         .replace(/&/g, "&amp;")
@@ -66,7 +66,15 @@ class CodeupClient {
                         .replace(/'/g, "&apos;");
             const comment = `【本评论来自大模型】\n${escapedComment}`
             await axios.post(url, {
-                reviewComment: comment
+                comment_type: 'INLINE_COMMENT',
+                content: comment,
+                file_path: r.fileName,
+                line_number: r.lineNumber,
+                from_patchset_biz_id: fromPatchSetId,
+                to_patchset_biz_id: toPatchSetId,
+                patchset_biz_id: toPatchSetId,
+                draft: false,
+                resolved: false,
             }, {
                 headers: {
                     'Content-Type': 'application/json',

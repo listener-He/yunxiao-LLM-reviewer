@@ -2,6 +2,7 @@ export class CodeReviewPatch {
   commitId!: string
   versionNo!: number
   patchSetName!: string
+  patchSetBizId!: string
   relatedMergeItemType!: string
 }
 
@@ -13,11 +14,24 @@ export class CodeReviewPatches {
   }
 
   fromCommitId(): string {
-    if(this.patches.length === 2) {
-      return this.mergeTarget().commitId
-    }
-    return this.mergeSourcesInVersionOrderDesc()[1].commitId
+    return this.fromPatchSet().commitId
   }
+
+  fromPatchSet() {
+    if(this.patches.length === 2) {
+      return this.mergeTarget()
+    }
+    return this.mergeSourcesInVersionOrderDesc()[1]
+  }
+
+  fromPatchSetId(): string {
+    return this.fromPatchSet().patchSetBizId
+  }
+
+  toPatchSetId(): string {
+    return this.mergeSourcesInVersionOrderDesc()[0].patchSetBizId
+  }
+
   toCommitId(): string {
     return this.mergeSourcesInVersionOrderDesc()[0].commitId
   }

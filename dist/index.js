@@ -64,18 +64,8 @@ const codeReview = (params) => __awaiter(void 0, void 0, void 0, function* () {
         .map(d => d.diff).join("\n");
     const result = yield dashscopeChat.reviewCode(combinedDiff);
     for (const r of result) {
-        yield mrClient.commentOnMR(r);
+        yield mrClient.commentOnMR(r, crPatches.fromPatchSetId(), crPatches.toPatchSetId());
     }
-    // for(const diff of compareResult.diffs) {
-    //   if(diff.binary || diff.deletedFile) {
-    //     step.info(`${diff.oldPath} is deleted or a binary file, no need to review`)
-    //     continue
-    //   }
-    //   const result: ReviewResult[] = await dashscopeChat.reviewCode(diff)
-    //   for(const r of result) {
-    //     await mrClient.commentOnMR(r)
-    //   }
-    // }
 });
 exports["default"] = codeReview;
 //# sourceMappingURL=code_review.js.map
@@ -97,10 +87,19 @@ class CodeReviewPatches {
         this.patches = patches;
     }
     fromCommitId() {
+        return this.fromPatchSet().commitId;
+    }
+    fromPatchSet() {
         if (this.patches.length === 2) {
-            return this.mergeTarget().commitId;
+            return this.mergeTarget();
         }
-        return this.mergeSourcesInVersionOrderDesc()[1].commitId;
+        return this.mergeSourcesInVersionOrderDesc()[1];
+    }
+    fromPatchSetId() {
+        return this.fromPatchSet().patchSetBizId;
+    }
+    toPatchSetId() {
+        return this.mergeSourcesInVersionOrderDesc()[0].patchSetBizId;
     }
     toCommitId() {
         return this.mergeSourcesInVersionOrderDesc()[0].commitId;
@@ -213,9 +212,9 @@ class CodeupClient {
             }
         });
     }
-    commentOnMR(r) {
+    commentOnMR(r, fromPatchSetId, toPatchSetId) {
         return __awaiter(this, void 0, void 0, function* () {
-            const url = `${this.baseUrl}/organizations/${this.orgId}/repositories/${this.repoId}/changeRequests/${this.mrLocalId}/review`;
+            const url = `${this.baseUrl}/organizations/${this.orgId}/repositories/${this.repoId}/changeRequests/${this.mrLocalId}/comments`;
             try {
                 const escapedComment = r.comment
                     .replace(/&/g, "&amp;")
@@ -224,14 +223,22 @@ class CodeupClient {
                     .replace(/"/g, "&quot;")
                     .replace(/'/g, "&apos;");
                 const comment = `【本评论来自大模型】\n${escapedComment}`;
-                // await axios.post(url, {
-                //     reviewComment: comment
-                // }, {
-                //     headers: {
-                //         'Content-Type': 'application/json',
-                //         'x-yunxiao-token': this.token,
-                //     },
-                // });
+                yield axios_1.default.post(url, {
+                    comment_type: 'INLINE_COMMENT',
+                    content: comment,
+                    file_path: r.fileName,
+                    line_number: r.lineNumber,
+                    from_patchset_biz_id: fromPatchSetId,
+                    to_patchset_biz_id: toPatchSetId,
+                    patchset_biz_id: toPatchSetId,
+                    draft: false,
+                    resolved: false,
+                }, {
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'x-yunxiao-token': this.token,
+                    },
+                });
                 step.info(`Has Commented on ${r.fileName}:\n${escapedComment}`);
             }
             catch (error) {
@@ -376,17 +383,18 @@ class Chat {
     }
     reviewCode(diff) {
         return __awaiter(this, void 0, void 0, function* () {
-            // const prompt = '下面是一个git diff，请从代码风格和代码正确性的角度出发，给出评论，直接给出json数组格式的答案，不要输出任何别的东西。json数组中的每个元素包含三个字段：fileName lineNumber comment\n' + diff
-            const prompt = '下面是一个代码diff，请找出明显的代码风格问题、工程实践问题，和代码正确性问题，用纯文本（非markdown）的格式直接给出改进意见，无需添加任何前置说明\n' + diff;
+            const prompt = '下面是一段代码Git Diff。请找出明显的代码风格问题、工程实践问题，和代码正确性问题。用纯文本（非markdown）的json数组格式，针对每个hunk给出改进意见（如果有），无需添加任何前置说明。json数组中的每个元素包含三个字段：fileName lineNumber comment。注意lineNumber应该是有修改的行，而非未修改的行\n' + diff;
             const completion = yield this.openai.chat.completions.create({
                 model: this.modelName,
                 messages: [
                     { role: "user", content: prompt }
                 ],
+                temperature: 0.2,
+                top_p: 0.1,
             });
             const content = completion.choices[0].message.content;
             try {
-                return JSON.parse(completion.choices[0].message.content);
+                return JSON.parse(content);
             }
             catch (err) {
                 step.info('cannot parse result as array, return original content');

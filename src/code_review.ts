@@ -25,7 +25,7 @@ const codeReview = async (params: IParams) => {
     .map(d => d.diff).join("\n")
   const result: ReviewResult[] = await dashscopeChat.reviewCode(combinedDiff)
   for(const r of result) {
-    await mrClient.commentOnMR(r)
+    await mrClient.commentOnMR(r, crPatches.fromPatchSetId(), crPatches.toPatchSetId())
   }
 }
 
