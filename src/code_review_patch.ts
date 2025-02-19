@@ -105,20 +105,52 @@ export class CompareResult {
   }
 
   getTargetFileHunkStartLine(lineNumber: number, lines: string[]) {
+    return this.getFirstAdditionLineNumber(lineNumber, lines) || 
+           this.getLineBeforeFirstDeletion(lineNumber, lines) ||
+           parseInt(lines[lineNumber].match(hunkStartReg)![2], 10);
+  }
+
+  getLineBeforeFirstDeletion(lineNumber: number, lines: string[]) {
+    if(lines[lineNumber + 1].startsWith('-')) {
+      return null
+    }
+
     const hunkMatch = lines[lineNumber].match(hunkStartReg);
-    let hunkStartingNumber = parseInt(hunkMatch![2], 10);
+    let lineInCurrentHunk = parseInt(hunkMatch![2], 10);
+
     lineNumber++
-    
+
+    while(lineNumber < lines.length && !(lines[lineNumber].match(hunkStartReg))) {
+      if(lines[lineNumber].startsWith('-')) {
+        break;
+      }
+      lineInCurrentHunk++
+      lineNumber++
+    }
+    if(lineNumber < lines.length && lines[lineNumber ].startsWith('-')) {
+      return lineInCurrentHunk - 1
+    }
+    return null;
+  }
+
+  getFirstAdditionLineNumber(lineNumber: number, lines: string[]) {
+    const hunkMatch = lines[lineNumber].match(hunkStartReg);
+    let lineInCurrentHunk = parseInt(hunkMatch![2], 10);
+    lineNumber++
+
     while(lineNumber < lines.length && 
       !(lines[lineNumber].match(hunkStartReg)) &&
       !lines[lineNumber].startsWith('+')
     ) {
-      if(!lines[lineNumber].startsWith('-')) {
-        hunkStartingNumber++
+      if(!lines[lineNumber].startsWith('-') && lineNumber !== lines.length - 1) {
+        lineInCurrentHunk++
       }
       lineNumber++
     }
-    return hunkStartingNumber
+    if(lineNumber < lines.length && lines[lineNumber].startsWith('+')) {
+      return lineInCurrentHunk
+    }
+    return null;
   }
 
   getHunkDiff(hunkHead: string, lineNumber: number, lines: string[]) {

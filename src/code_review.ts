@@ -1,6 +1,6 @@
 import { CodeReviewPatch, CodeReviewPatches, CompareResult } from "./code_review_patch";
 import CodeupClient from "./codeup_client";
-import { Chat, ReviewResult } from "./llm_chat";
+import { Chat } from "./llm_chat";
 import { IParams } from "./params";
 import * as step from '@flow-step/step-toolkit'
 
