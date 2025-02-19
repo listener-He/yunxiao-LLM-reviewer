@@ -105,8 +105,12 @@ export class CompareResult {
   }
 
   getTargetFileHunkStartLine(lineNumber: number, lines: string[]) {
+    // 这里只计算目标版本文件的行号，因为comment只会打到目标版本的文件的行上
+    // 如果目标版本文件存在添加的行，则取第一个添加的行
     return this.getFirstAdditionLineNumber(lineNumber, lines) || 
+    // 否则如果目标版本文件存在删除的行，由于删除的行在目标版本中已经不存在了，所以取目标版本中上面的那一行
            this.getLineBeforeFirstDeletion(lineNumber, lines) ||
+    // 如果上面两者都不存在，比如只删除了第一行，就即不存在添加的行，也不存在删除的行的上一行，就取hunk元数据中的目标版本文件中的第一行
            parseInt(lines[lineNumber].match(hunkStartReg)![2], 10);
   }
 
