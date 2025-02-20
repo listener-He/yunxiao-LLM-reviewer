@@ -23,8 +23,8 @@ items:
   - label: 云效token
     name: yunxiaoToken
     type: input
-    description: 可以引用私密配置项 ${YUNXIAO_TOKEN}
+    description: 可以引用私密配置项 ${YUNXIAO_TOKEN},需要在流水线编辑页的变量与缓存中配置该变量的具体值
   - label: 百炼APIKey
     name: dashscopeApikey
     type: input
-    description: 可以引用私密配置项 ${DASHSCOPE_TOKEN}
+    description: 可以引用私密配置项 ${BAILIAN_APIKEY},需要在流水线编辑页的变量与缓存中配置该变量的具体值
