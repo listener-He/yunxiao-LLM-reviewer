@@ -20,7 +20,7 @@ export class IParams {
             return null;
         }
         const sources: CodeSource[] = JSON.parse(this.sources!)
-        const currentSource = sources.filter(source => source.type === 'codeup' && source.sign === this.source!)
+        const currentSource = sources.filter(source => source.type === 'codeup' && source.name === this.source!)
         if(currentSource.length === 1 && !!currentSource[0].data?.codeupMrLocalId) {
             return currentSource[0]
         }

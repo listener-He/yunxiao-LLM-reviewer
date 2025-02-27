@@ -1,6 +1,6 @@
 export default class CodeSource {
   type!: string
-  sign!: string
+  name!: string
   data!: {
     codeupMrLocalId: number
     projectId: number
