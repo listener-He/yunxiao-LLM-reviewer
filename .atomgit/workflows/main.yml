@@ -27,7 +27,3 @@ jobs:
       # 运行测试
       - name: Run tests
         run: npm install && npm run test
-
-      # 构建项目（如果需要）
-      - name: Build project
-        run: npm run build
