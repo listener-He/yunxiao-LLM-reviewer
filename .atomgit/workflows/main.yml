@@ -31,13 +31,3 @@ jobs:
       # 构建项目（如果需要）
       - name: Build project
         run: npm run build
-
-      # （可选）缓存依赖以加速后续构建
-      - name: Cache dependencies
-        id: cache-dependencies
-        uses: actions/cache@v3
-        with:
-          path: ~/.npm
-          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
-          restore-keys: |
-            ${{ runner.os }}-node
