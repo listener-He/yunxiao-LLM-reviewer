@@ -85,7 +85,7 @@ export class CompareResult {
       const lines = diff.diff.split('\n');
 
       // 判断是否为新增文件（旧文件是 /dev/null）
-      const isNewFile = lines[0].startsWith('--- /dev/null');
+      const isNewFile = lines[0].startsWith('--- a/dev/null');
 
       // 提取文件名行
       const fileNameLine = isNewFile ? lines[1] : lines[0];
