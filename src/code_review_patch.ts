@@ -82,10 +82,14 @@ export class CompareResult {
 
   getHunks(): Hunk[] {
     return this.diffs.flatMap(diff => {
-      const lines = diff.diff.split('\n')
-      const fileName = lines[0].replace('--- a/', '')
-      const hunkHead = lines[0] + '\n' + lines[1]
-      return this.getHunksFromDiff(hunkHead, fileName, lines)
+      const lines = diff.diff.split('\n');
+      // 处理新增文件的情况（当旧文件是 /dev/null 时）
+      const isNewFile = lines[0].startsWith('--- a/dev/null');
+      const fileNameLine = isNewFile ? lines[1] : lines[0];
+      const fileName = fileNameLine.replace(isNewFile ? '+++ b/' : '--- a/', '');
+
+      const hunkHead = lines[0] + '\n' + lines[1];
+      return this.getHunksFromDiff(hunkHead, fileName, lines);
     })
   }
 

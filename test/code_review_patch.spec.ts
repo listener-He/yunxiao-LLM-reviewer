@@ -3,6 +3,15 @@ import { PatchDiff, CompareResult } from "../src/code_review_patch";
 import { describe } from "mocha"
 
 describe('CompareResult', () => {
+    it('should handle new file filename', () => {
+        const patchDiff = new PatchDiff()
+        patchDiff.diff = '--- a/dev/null\n' +
+            '+++ b/src/main/java/com/example/demo/Calculator.java\n' +
+            '@@ -0,0 +1,1 @@\n' +
+            '+// some other change\n';
+        const result = new CompareResult([patchDiff])
+        expect(result.getHunks()[0].fileName).to.equal('src/main/java/com/example/demo/Calculator.java')
+    })
     describe('addition only', () => {
         it('should use first changed line as linenumber', () => {
             const patchDiff = new PatchDiff()
