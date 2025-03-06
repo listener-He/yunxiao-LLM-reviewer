@@ -5,7 +5,7 @@ import { describe } from "mocha"
 describe('CompareResult', () => {
     it('should handle new file filename', () => {
         const patchDiff = new PatchDiff()
-        patchDiff.diff = '--- a/dev/null\n' +
+        patchDiff.diff = '--- /dev/null\n' +
             '+++ b/src/main/java/com/example/demo/Calculator.java\n' +
             '@@ -0,0 +1,1 @@\n' +
             '+// some other change\n';
