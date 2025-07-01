@@ -9,7 +9,7 @@ describe('CompareResult', () => {
             '+++ b/src/main/java/com/example/demo/Calculator.java\n' +
             '@@ -0,0 +1,1 @@\n' +
             '+// some other change\n';
-        const result = new CompareResult([patchDiff])
+        const result = new CompareResult('',[patchDiff])
         expect(result.getHunks()[0].fileName).to.equal('src/main/java/com/example/demo/Calculator.java')
     })
     describe('addition only', () => {
@@ -26,7 +26,7 @@ describe('CompareResult', () => {
                                 '    public class Calculator {\n' +
                                 '\n' +
                                 '        public int add(int a, int b) {'
-            const result = new CompareResult([patchDiff])
+            const result = new CompareResult('',[patchDiff])
             expect(result.getHunks()[0].lineNumber).to.equal(3)
             expect(result.getHunks()[0].fileName).to.equal('src/main/java/com/example/demo/Calculator.java')
         })
@@ -42,7 +42,7 @@ describe('CompareResult', () => {
                             'COPY src /usr/src/app/src\n' +
                             'COPY pom.xml /usr/src/app\n' +
                             'COPY settings.xml /user/src/app/settings.xml`'
-            const result = new CompareResult([patchDiff])
+            const result = new CompareResult('',[patchDiff])
             expect(result.getHunks()[0].lineNumber).to.equal(1)
         })
 
@@ -55,7 +55,7 @@ describe('CompareResult', () => {
                             '\n' +
                             ' ENTRYPOINT ["java","-Djava.security.egd=file:/dev/./urandom","-jar","/app.jar"]\n' +
                             '+added line'
-            const result = new CompareResult([patchDiff])
+            const result = new CompareResult('',[patchDiff])
             expect(result.getHunks()[0].lineNumber).to.equal(13)
         })
     })
@@ -76,7 +76,7 @@ describe('CompareResult', () => {
                             '-    }\n' +
                             '-\n' +
                             '}'
-            const result = new CompareResult([patchDiff])
+            const result = new CompareResult('',[patchDiff])
             expect(result.getHunks()[0].lineNumber).to.equal(24)
         })
 
@@ -89,7 +89,7 @@ describe('CompareResult', () => {
                             'COPY src /usr/src/app/src\n' +
                             'COPY pom.xml /usr/src/app\n' +
                             'COPY settings.xml /user/src/app/settings.xml'
-            const result = new CompareResult([patchDiff])
+            const result = new CompareResult('',[patchDiff])
             expect(result.getHunks()[0].lineNumber).to.equal(1)
         })
 
@@ -103,7 +103,7 @@ describe('CompareResult', () => {
                                 ' COPY --from=build /usr/src/app/${JAR_FILE} app.jar\n' +
                                 '-\n' +
                                 '-ENTRYPOINT ["java","-Djava.security.egd=file:/dev/./urandom","-jar","/app.jar"]'
-            const result = new CompareResult([patchDiff])
+            const result = new CompareResult('',[patchDiff])
             expect(result.getHunks()[0].lineNumber).to.equal(10)
         })
     })
@@ -125,7 +125,7 @@ describe('CompareResult', () => {
                             '-VOLUME /tmp\n' +
                             ' ARG JAR_FILE=target/application.jar\n' +
                             ' COPY --from=build /usr/src/app/${JAR_FILE} app.jar'
-            const result = new CompareResult([patchDiff])
+            const result = new CompareResult('',[patchDiff])
             expect(result.getHunks()[0].lineNumber).to.equal(2)
         })
 
@@ -142,7 +142,7 @@ describe('CompareResult', () => {
                             ' RUN mvn -f /usr/src/app/pom.xml -s /user/src/app/settings.xml clean package -DskipTests\n' +
                             '\n' +
                             ' from registry.cn-beijing.aliyuncs.com/hub-mirrors/openjdk:8-jdk-alpine'
-            const result = new CompareResult([patchDiff])
+            const result = new CompareResult('',[patchDiff])
             expect(result.getHunks()[0].lineNumber).to.equal(2)
         })
     })
@@ -189,7 +189,7 @@ describe('CompareResult', () => {
                                 '+    }\n' +
                                 '+\n' +
                                 '    }'
-            const result = new CompareResult([patchDiff1, patchDiff2])
+            const result = new CompareResult('',[patchDiff1, patchDiff2])
             expect(result.getHunks().length).to.equal(3)
             expect(result.getHunks()[0].lineNumber).to.equal(3)
             expect(result.getHunks()[1].lineNumber).to.equal(20)
