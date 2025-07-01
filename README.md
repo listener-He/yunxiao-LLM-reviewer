@@ -42,7 +42,7 @@ npm install --registry=https://registry.npmmirror.com
 | 参数名称                                                     | 描述                                                         |
 | ------------------------------------------------------------ | ------------------------------------------------------------ |
 | `modelName`                                                  | 大模型名称（例如 qwen、deepseek）                            |
-| `yunxiaoToken`                                               | 云效 Token（可在流水线中配置）为了能够让大模型调用云效API获取合并请求详情，并把Review的结果写到合并请求中，我们需要创建一个云效API的访问令牌。<br/>点击右上角的头像-个人设置-新建令牌，并按照下图中设置令牌的权限：代码比较设置为只读，合并请求设置为读写 |
+| `yunxiaoToken`                                               | 云效 Token（可在流水线中配置）为了能够让大模型调用云效API获取合并请求详情，并把Review的结果写到合并请求中，我们需要创建一个云效API的访问令牌。<br/>点击右上角的头像-个人设置-新建令牌，并设置令牌的权限：代码比较设置为只读，合并请求设置为读写 |
 | `dashscopeApikey`                                            | 百炼 API Key                                                 |
 | `llmChatPrompt`                                              | 自定义提示词                                                 |
 | [temperature](https://github.com/listener-He/yunxiao-LLM-reviewer/blob/main/step.yaml#L37-L41) | 模型温度值                                                   |
@@ -76,9 +76,9 @@ node dist/index.js
    flow-cli step publish --auto-version
    ```
 
-   > 注：flow-cli的详细操作可参见文档：https://help.aliyun.com/zh/yunxiao/user-guide/use-flow-cli-to-customize-development-steps
+   > 注：flow-cli的详细操作可参见文档: https://help.aliyun.com/zh/yunxiao/user-guide/use-flow-cli-to-customize-development-steps
    >
-   > 步骤发布后，访问https://flow.aliyun.com/，在步骤管理-组织步骤中可以看到MergeRequestLLMReviewer 步骤，即表示步骤发布成功。如果你看不到步骤管理菜单项，是因为你当前账号没有步骤管理的权限，可以切换为管理员账号或者让管理员赋予你步骤管理的权限。
+   > 步骤发布后，访问: https://flow.aliyun.com 在步骤管理-组织步骤中可以看到MergeRequestLLMReviewer 步骤，即表示步骤发布成功。如果你看不到步骤管理菜单项，是因为你当前账号没有步骤管理的权限，可以切换为管理员账号或者让管理员赋予你步骤管理的权限。
 
 5. 在云效流水线编辑页的 **变量与缓存** 中配置 `YUNXIAO_TOKEN` 和 `BAILIAN_APIKEY`。选择使用模型
 
