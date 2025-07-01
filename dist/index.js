@@ -59,7 +59,7 @@ const codeReview = (params) => __awaiter(void 0, void 0, void 0, function* () {
     const compareResult = yield mrClient.getDiff(crPatches.fromCommitId(), crPatches.toCommitId());
     step.info(`Diff data between last two patches:\n ${compareResult.getCombinedDiff()}`);
     step.info(`Will review file diffs, and comment to this MR: ${mrClient.getMRUrl()}`);
-    const dashscopeChat = new llm_chat_1.Chat(params.dashscopeApikey, params.modelName, params.llmChatPrompt);
+    const dashscopeChat = new llm_chat_1.Chat(params.dashscopeApikey, params.modelName, params.llmChatPrompt, params.temperature);
     const hunksByFile = compareResult.getHunks().reduce((acc, hunk) => {
         if (!acc[hunk.fileName]) {
             acc[hunk.fileName] = [];
@@ -137,8 +137,9 @@ class Hunk {
 exports.Hunk = Hunk;
 const hunkStartReg = /@@ -(\d+),\d+ \+(\d+),\d+ @@/;
 class CompareResult {
-    constructor(diffs) {
+    constructor(committerName, diffs) {
         this.diffs = diffs;
+        this.committerName = committerName;
     }
     getCombinedDiff() {
         return this.diffs
@@ -317,7 +318,7 @@ class CodeupClient {
                         'x-yunxiao-token': this.token,
                     },
                 });
-                return new code_review_patch_1.CompareResult(response.data.diffs); // 返回响应数据
+                return new code_review_patch_1.CompareResult(response.data.committerName, response.data.diffs); // 返回响应数据
             }
             catch (error) {
                 console.error('Error fetching diff patches:', error);
@@ -467,36 +468,31 @@ class ReviewResult {
 }
 exports.ReviewResult = ReviewResult;
 class Chat {
-    constructor(apiKey, modelName, llmChatPrompt) {
+    constructor(apiKey, modelName, llmChatPrompt, temperature) {
         this.openai = new openai_1.default({
             apiKey: apiKey,
             baseURL: 'https://dashscope.aliyuncs.com/compatible-mode/v1',
             timeout: 600000
         });
+        this.temperature = temperature;
         this.modelName = modelName;
         if (!llmChatPrompt) {
-            llmChatPrompt = `你是一位资深 Java 开发工程师，具备丰富的 Spring Boot 框架和 JDK 17 实践经验 数据库调优能力。请扮演资深代码评审专家,结合审查要求进行代码审查任务
-                                你的任务是对提交的代码变更进行严格审查，聚焦以下七个维度：
-                                1. 代码风格：是否符合主流编码规范（如阿里巴巴 Java 编码规约），命名是否清晰合理，格式是否统一。
-                                2. 冗余代码：是否存在无用的条件判断、重复方法调用、死代码、可简化逻辑等。
-                                3. 逻辑错误：是否有明显逻辑缺陷、边界条件未处理、循环控制不严谨、状态管理混乱等问题。
-                                4. 安全隐患：是否存在潜在安全风险，如日志泄露敏感信息、SQL 注入、XSS、硬编码密码、权限校验缺失等。
-                                5. 潜在问题：是否可能引发并发问题、资源泄漏、空指针异常、性能瓶颈、事务失效、AOP 失效等运行时问题。
-                                6. SQL性能优化：检查数据库操作相关代码，包括但不限于查询语句效率低下、索引未使用、不必要的全表扫描、大事务等。
-                                7. 业务架构与数据模型评审：评估代码实现是否遵循了良好的分层架构原则（如 MVC、DDD），数据模型设计是否合理，关系映射是否准确，以及模块间依赖是否健康。
-                                
-                                输出规则：
-                                - 仅使用中文列出具体问题，无需解释原因
-                                - 若无问题，请直接回复："没问题"
-                                - 禁止使用任何 Markdown 格式
-                                - 不添加任何前缀或后缀内容，如“问题如下：”、“建议：”等
-                                - 每个问题单独成行，编号由系统自动生成，你只需按顺序列出即可
-                                - 如果有多个问题，请分行列出，每行一个问题
-                                
-                                额外指导：
-                                - 对于 SQL 性能问题，注意指出可能导致慢查询的因素，比如缺少必要的索引、未优化的 JOIN 操作等。
-                                - 在业务架构方面，考虑代码是否易于维护、扩展；模块划分是否清晰；接口定义是否合理。
-                                - 数据模型评审应关注实体间的关系是否正确表示，ORM 映射是否合适，以及数据完整性约束。`;
+            llmChatPrompt = `你是一位资深 Java 开发工程师和代码评审专家，专注于Web应用的安全性、稳定性与性能。
+                             你的任务是对提交的代码变更进行严格审查    
+                                仅指出以下类型的严重问题： 
+                                  1. 逻辑错误：可能导致业务流程异常、数据不一致、死循环、方法内执行逻辑不自洽的空指针、逻辑缺陷、边界条件未处理、循环控制不严谨、状态管理混乱等运行时崩溃。 
+                                  2. 安全隐患：如 SQL 注入、数据权限绕过、敏感信息泄露等。 
+                                  3. 资源泄漏：如数据库连接未关闭、文件流未释放、线程池未正确关闭等
+                                  4. 并发问题：是否有较大可能引发并发问题、资源泄漏、性能瓶颈等运行时问题。 
+                                  4. SQL性能优化：仅限数据库操作代码，如慢查询、全表扫描、缺少索引、N+1 查询、大结果集处理不当、无分页返回大量数据、无限递归导致栈溢出等。 
+                                  5. 以上内容仅在不影响性能、严重可读性、严重缺陷的情况下其他如注释 代码风格的可忽略仅聚焦严重问题，对于空指针检查范围仅限在方法内执行逻辑不自洽的空指针，其他如参数未判断null可忽略
+                                输出规则： 
+                                  - 仅列出严重影响系统运行、安全或性能的问题
+                                  - 不输出无关紧要的内容（如命名规范、空行、日志打印、格式美化）
+                                  - 仅使用中文列出具体问题，无需解释原因 
+                                  - 若无问题，请直接回复："没问题" 
+                                  - 禁止使用任何 Markdown 格式 
+                                  - 不添加任何前缀或后缀内容，如“问题如下：”、“建议：”等 - 每个问题单独成行，按顺序列出即可`;
         }
         this.systemPrompt = llmChatPrompt;
     }
@@ -514,14 +510,14 @@ class Chat {
                         【待审查代码块】：
                         ${hunksDiff}
                        
-                        请严格按照审查要求和输出规则进行反馈，并特别关注 SQL 性能优化、业务架构及数据模型的设计合理性。`;
+                        请严格按照系统提示词中的要求，仅反馈可能影响系统稳定性、业务流程、安全性或性能的严重问题。`;
             const completion = yield this.openai.chat.completions.create({
                 model: this.modelName,
                 messages: [
                     { role: 'system', content: this.systemPrompt },
                     { role: 'user', content: prompt }
                 ],
-                temperature: 0.2,
+                temperature: this.temperature,
                 top_p: 0.2
             });
             const content = ((_a = completion.choices[0].message.content) === null || _a === void 0 ? void 0 : _a.trim()) || '';
