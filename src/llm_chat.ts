@@ -87,7 +87,7 @@ export class Chat {
                         请严格按照系统提示词中的要求，仅反馈可能影响系统稳定性、业务流程、安全性或性能的严重问题。`
 
         // 输出审查开始的日志
-        step.info(`llmChat Reviewer >>>>>> 开始评审 file: ${fileName}`)
+        step.info(`llmChat Reviewer >>>>>> 开始评审 file: ${fileName} 差异代码：${hunksDiff}`)
         try {
             // 使用OpenAI的Chat API创建会话并获取回复
             const completion: ChatCompletion = await this.openai.chat.completions.create({
