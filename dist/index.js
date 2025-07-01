@@ -47,19 +47,40 @@ const codeup_client_1 = __importDefault(__nccwpck_require__(25007));
 const llm_chat_1 = __nccwpck_require__(49251);
 const step = __importStar(__nccwpck_require__(31954));
 const p_limit_1 = __importDefault(__nccwpck_require__(57684));
+/**
+ * 执行代码审查的异步函数
+ * @param params 包含必要参数的对象，用于代码审查流程
+ *
+ * 该函数流程：
+ * 1. 获取当前源代码仓库信息
+ * 2. 如果源代码不是由合并请求触发，则跳过审查
+ * 3. 创建代码审查客户端，用于与代码平台交互
+ * 4. 获取差异补丁，准备进行代码审查
+ * 5. 通过AI辅助审查代码，生成评论
+ * 6. 将评论发布到合并请求中
+ */
 const codeReview = (params) => __awaiter(void 0, void 0, void 0, function* () {
+    // 获取当前源代码仓库信息，包括合并请求相关信息
     const source = params.getCurrentSourceWithMr();
+    // 检查是否有源代码信息，如果没有则跳过审查
     if (!source) {
         step.info('Repository in current folder is not triggered by MergeRequest. Skip');
         return;
     }
+    // 创建代码审查客户端，用于与代码平台交互
     const mrClient = new codeup_client_1.default(params.yunxiaoToken, params.orgId, source);
+    // 获取差异补丁，准备进行代码审查
     const patches = yield mrClient.getDiffPatches();
     const crPatches = new code_review_patch_1.CodeReviewPatches(patches);
+    // 获取两个补丁之间的差异详细信息
     const compareResult = yield mrClient.getDiff(crPatches.fromCommitId(), crPatches.toCommitId());
+    // 输出差异信息
     step.info(`Diff data between last two patches:\n ${compareResult.getCombinedDiff()}`);
+    // 准备开始代码审查，并提供合并请求的链接
     step.info(`Will review file diffs, and comment to this MR: ${mrClient.getMRUrl()}`);
+    // 创建聊天客户端，用于代码审查的AI辅助
     const dashscopeChat = new llm_chat_1.Chat(params.dashscopeApikey, params.modelName, params.llmChatPrompt, params.temperature);
+    // 将差异信息按文件名分组
     const hunksByFile = compareResult.getHunks().reduce((acc, hunk) => {
         if (!acc[hunk.fileName]) {
             acc[hunk.fileName] = [];
@@ -67,16 +88,22 @@ const codeReview = (params) => __awaiter(void 0, void 0, void 0, function* () {
         acc[hunk.fileName].push(hunk);
         return acc;
     }, {});
+    // 创建一个并发限制器，限制同时进行的代码审查数量
     const limit = (0, p_limit_1.default)(30);
+    // 对每个文件的差异进行代码审查，并发布评论
     const promises = Object.entries(hunksByFile).map(([fileName, hunks]) => __awaiter(void 0, void 0, void 0, function* () {
         return limit(() => __awaiter(void 0, void 0, void 0, function* () {
+            // 使用AI辅助审查代码，并获取审查结果
             const result = yield dashscopeChat.reviewCode(compareResult.getCombinedDiff(), fileName, hunks);
+            // 如果审查结果为空，则不执行任何操作
             if (!result) {
                 return;
             }
+            // 将审查结果作为评论发布到合并请求中
             yield mrClient.commentOnMR(result, crPatches.fromPatchSetId(), crPatches.toPatchSetId());
         }));
     }));
+    // 等待所有代码审查和评论发布任务完成
     yield Promise.all(promises);
 });
 exports["default"] = codeReview;
@@ -94,31 +121,77 @@ exports.CompareResult = exports.Hunk = exports.PatchDiff = exports.CodeReviewPat
 class CodeReviewPatch {
 }
 exports.CodeReviewPatch = CodeReviewPatch;
+/**
+ * CodeReviewPatches 类用于封装与代码审查相关的补丁集合，提供获取和操作这些补丁信息的方法
+ */
 class CodeReviewPatches {
+    /**
+     * 构造函数，初始化 CodeReviewPatches 实例
+     *
+     * @param patches 一个 CodeReviewPatch 对象数组，表示本次审查涉及的所有补丁信息
+     */
     constructor(patches) {
         this.patches = patches;
     }
+    /**
+     * 获取基础补丁集（from patch set）的提交 ID
+     *
+     * @returns 返回基础补丁集的提交 ID，用于作为对比起点
+     */
     fromCommitId() {
         return this.fromPatchSet().commitId;
     }
+    /**
+     * 确定并返回基础补丁集（from patch set）
+     *
+     * 如果补丁数量为两个，则返回合并目标（merge target）；
+     * 否则返回第二旧的补丁集。
+     *
+     * @returns 返回基础补丁集对象
+     */
     fromPatchSet() {
         if (this.patches.length === 2) {
             return this.mergeTarget();
         }
         return this.mergeSourcesInVersionOrderDesc()[1];
     }
+    /**
+     * 获取基础补丁集的业务 ID（Biz ID）
+     *
+     * @returns 返回基础补丁集的业务 ID
+     */
     fromPatchSetId() {
         return this.fromPatchSet().patchSetBizId;
     }
+    /**
+     * 获取目标补丁集（to patch set）的业务 ID
+     *
+     * @returns 返回目标补丁集的业务 ID
+     */
     toPatchSetId() {
         return this.mergeSourcesInVersionOrderDesc()[0].patchSetBizId;
     }
+    /**
+     * 获取目标补丁集的提交 ID
+     *
+     * @returns 返回目标补丁集的提交 ID
+     */
     toCommitId() {
         return this.mergeSourcesInVersionOrderDesc()[0].commitId;
     }
+    /**
+     * 获取合并目标补丁（merge target patch）
+     *
+     * @returns 返回合并目标补丁对象
+     */
     mergeTarget() {
         return this.patches.filter(p => p.relatedMergeItemType === 'MERGE_TARGET')[0];
     }
+    /**
+     * 筛选出所有合并源补丁（merge source patches），并按版本号从高到低排序
+     *
+     * @returns 返回按版本号降序排列的合并源补丁数组
+     */
     mergeSourcesInVersionOrderDesc() {
         return this.patches.filter(p => p.relatedMergeItemType === 'MERGE_SOURCE').sort((a, b) => a.versionNo - b.versionNo).reverse();
     }
@@ -144,10 +217,20 @@ class CompareResult {
     getCombinedDiff() {
         return this.diffs
             .filter(d => !d.binary && !d.deletedFile)
-            .map(d => d.diff).join("\n");
+            .map(d => d.diff).join('\n');
     }
+    /**
+     * 获取差异块（hunks）
+     *
+     * 本方法通过处理 `diffs` 属性中的每个差异对象来生成一个包含所有差异块的数组
+     * 每个差异对象代表一对文件之间的差异，本方法将这些差异拆分成更小的单位——差异块（hunk）
+     * 每个差异块都包含有关文件特定部分更改的信息
+     *
+     * @returns {Hunk[]} 返回一个包含所有差异块的数组
+     */
     getHunks() {
         return this.diffs.flatMap(diff => {
+            // 将差异字符串拆分成行数组
             const lines = diff.diff.split('\n');
             // 判断是否为新增文件（旧文件是 /dev/null）
             const isNewFile = lines[0].startsWith('--- /dev/null');
@@ -161,19 +244,53 @@ class CompareResult {
             return this.getHunksFromDiff(hunkHead, fileName, lines);
         });
     }
+    /**
+     * 从差异中提取变更块信息
+     *
+     * 此函数旨在解析给定文件的差异输出，从中提取出各个变更块（hunk）的信息这些信息包括文件名、变更块的起始行号以及变更的具体内容
+     * 变更块是文件对比中连续更改的部分，通常由版本控制系统（如Git）在比较文件差异时使用
+     *
+     * @param hunkHead 差异头部信息，通常包含版本控制系统的元数据
+     * @param fileName 正在处理的文件名
+     * @param lines 文件差异的行数组，每行代表差异输出中的一行
+     * @returns 返回一个Hunk对象数组，每个对象代表一个变更块
+     */
     getHunksFromDiff(hunkHead, fileName, lines) {
+        // 存储解析出的变更块
         const hunks = [];
+        // 初始化行号为2，假设差异输出的前两行是版本控制系统的元数据，不包含实际的文件差异
         let lineNumber = 2;
+        // 遍历差异输出的每一行，寻找变更块的开始
         while (lineNumber < lines.length) {
+            // 检查当前行是否为变更块的开始
             if (lines[lineNumber].match(hunkStartReg)) {
+                // 获取目标文件变更块的起始行号
                 const startLine = this.getTargetFileHunkStartLine(lineNumber, lines);
+                // 获取变更块的差异内容
                 const hunkDiff = this.getHunkDiff(hunkHead, lineNumber, lines);
+                // 创建Hunk对象并添加到变更块数组中
                 hunks.push(new Hunk(fileName, startLine, hunkDiff));
             }
+            // 移动到下一行继续检查
             lineNumber++;
         }
+        // 返回解析出的所有变更块
         return hunks;
     }
+    /**
+     * 获取目标文件hunk的起始行号
+     *
+     * 此函数旨在计算目标版本文件中的行号，以便确定评论应附加的位置
+     * 它按照以下顺序尝试确定起始行号：
+     * 1. 如果目标版本文件中有添加的行，则选择第一行添加的行号
+     * 2. 如果没有添加的行，但有删除的行，则选择目标版本中删除的行上面的那一行
+     * 3. 如果上述两种情况都不存在，例如只删除了第一行，既没有添加的行，也没有删除的行的上一行，
+     *    则选择hunk元数据中目标版本文件中的第一行
+     *
+     * @param lineNumber 当前行号
+     * @param lines 文件的行数组
+     * @returns 目标文件hunk的起始行号
+     */
     getTargetFileHunkStartLine(lineNumber, lines) {
         // 这里只计算目标版本文件的行号，因为comment只会打到目标版本的文件的行上
         // 如果目标版本文件存在添加的行，则取第一个添加的行
@@ -183,51 +300,102 @@ class CompareResult {
             // 如果上面两者都不存在，比如只删除了第一行，就即不存在添加的行，也不存在删除的行的上一行，就取hunk元数据中的目标版本文件中的第一行
             parseInt(lines[lineNumber].match(hunkStartReg)[2], 10);
     }
+    /**
+     * 获取在第一次删除操作之前的行号
+     *
+     * 此函数旨在处理diff文本的解析，寻找第一个删除操作(-)之前的有效行号
+     * 它通过遍历给定的行集合，根据特定的规则确定行号
+     *
+     * @param lineNumber 起始行号，从这一行开始检查
+     * @param lines 包含diff信息的行数组
+     * @returns 返回第一个删除操作之前的行号，如果没有找到删除操作，则返回null
+     */
     getLineBeforeFirstDeletion(lineNumber, lines) {
+        // 检查下一行是否以删除操作开始，如果是，则返回null
         if (lines[lineNumber + 1].startsWith('-')) {
             return null;
         }
+        // 通过正则表达式匹配当前行是否为hunk的开始，如果是，提取行号
         const hunkMatch = lines[lineNumber].match(hunkStartReg);
         let lineInCurrentHunk = parseInt(hunkMatch[2], 10);
+        // 移动到下一行
         lineNumber++;
+        // 遍历行，直到找到下一个hunk的开始或文件结束
         while (lineNumber < lines.length && !(lines[lineNumber].match(hunkStartReg))) {
+            // 如果找到删除操作，停止遍历
             if (lines[lineNumber].startsWith('-')) {
                 break;
             }
+            // 更新当前行号
             lineInCurrentHunk++;
             lineNumber++;
         }
+        // 检查是否找到删除操作，如果是，返回删除操作前的行号
         if (lineNumber < lines.length && lines[lineNumber].startsWith('-')) {
             return lineInCurrentHunk - 1;
         }
+        // 如果没有找到删除操作，返回null
         return null;
     }
+    /**
+     * 获取第一个添加行的行号
+     *
+     * 该函数旨在解析给定行号和行数组，找到当前代码块中第一个被添加的行的行号
+     * 它主要用于处理diff输出，帮助定位修改的位置
+     *
+     * @param lineNumber 当前处理的行号
+     * @param lines 文件的行数组
+     * @returns 如果找到第一个添加的行，则返回其在当前hunk中的行号；否则返回null
+     */
     getFirstAdditionLineNumber(lineNumber, lines) {
+        // 匹配hunk开始的正则表达式
         const hunkMatch = lines[lineNumber].match(hunkStartReg);
+        // 解析当前hunk中的起始行号
         let lineInCurrentHunk = parseInt(hunkMatch[2], 10);
         lineNumber++;
+        // 遍历当前hunk，寻找第一个添加的行
         while (lineNumber < lines.length &&
             !(lines[lineNumber].match(hunkStartReg)) &&
             !lines[lineNumber].startsWith('+')) {
+            // 如果当前行不是删除的行，并且不是文件的最后一行，则行号递增
             if (!lines[lineNumber].startsWith('-') && lineNumber !== lines.length - 1) {
                 lineInCurrentHunk++;
             }
             lineNumber++;
         }
+        // 如果找到添加的行，则返回其在当前hunk中的行号
         if (lineNumber < lines.length && lines[lineNumber].startsWith('+')) {
             return lineInCurrentHunk;
         }
+        // 如果没有找到添加的行，则返回null
         return null;
     }
+    /**
+     * 获取差异块的字符串
+     *
+     * 此函数从给定的行号开始，收集差异块（hunk）的行，直到遇到下一个差异块的头部或文件结束
+     * 它首先将差异块的头部和指定行号的行内容添加到结果中，然后继续向下遍历，收集所有属于当前差异块的行
+     *
+     * @param hunkHead 差异块的头部字符串，用于标识差异块的开始
+     * @param lineNumber 开始收集差异块行的行号
+     * @param lines 文件的所有行，作为数组提供
+     * @returns 返回包含整个差异块的字符串
+     */
     getHunkDiff(hunkHead, lineNumber, lines) {
+        // 初始化差异块行数组，包含差异块头部和指定行的内容
         let hunkDiffLines = [hunkHead, lines[lineNumber]];
+        // 递增行号以开始遍历差异块的其余部分
         lineNumber++;
+        // 继续遍历直到到达文件末尾或下一个差异块的开始
         while (lineNumber < lines.length &&
             !(lines[lineNumber].match(hunkStartReg))) {
+            // 将当前行添加到差异块行数组中
             hunkDiffLines.push(lines[lineNumber]);
+            // 递增行号以遍历下一行
             lineNumber++;
         }
-        return hunkDiffLines.join("\n");
+        // 将差异块行数组连接成单个字符串并返回
+        return hunkDiffLines.join('\n');
     }
 }
 exports.CompareResult = CompareResult;
@@ -289,54 +457,97 @@ class CodeupClient {
         this.repoId = (_a = source === null || source === void 0 ? void 0 : source.data) === null || _a === void 0 ? void 0 : _a.projectId;
         this.mrLocalId = (_b = source === null || source === void 0 ? void 0 : source.data) === null || _b === void 0 ? void 0 : _b.codeupMrLocalId;
     }
-    // 获取 diff patches
+    /**
+     * 异步获取差异补丁信息
+     *
+     * 本函数通过发送HTTP GET请求，获取指定组织、仓库和变更请求的差异补丁信息
+     * 使用Axios库进行网络请求，并处理响应结果或潜在错误
+     *
+     * @returns {Promise<any>} 返回一个Promise对象，解析为API响应的数据
+     * @throws {Error} 当网络请求失败或处理错误时，抛出错误
+     */
     getDiffPatches() {
         return __awaiter(this, void 0, void 0, function* () {
+            // 构造请求URL
             const url = `${this.baseUrl}/organizations/${this.orgId}/repositories/${this.repoId}/changeRequests/${this.mrLocalId}/diffs/patches`;
             try {
+                // 发送GET请求，获取差异补丁信息
                 const response = yield axios_1.default.get(url, {
                     headers: {
                         'Content-Type': 'application/json',
-                        'x-yunxiao-token': this.token,
-                    },
+                        'x-yunxiao-token': this.token
+                    }
                 });
-                return response.data; // 返回响应数据
+                // 返回响应数据
+                return response.data;
             }
             catch (error) {
+                // 输出错误信息到控制台
                 console.error('Error fetching diff patches:', error);
-                throw error; // 抛出错误，以便调用者处理
+                // 抛出错误，以便调用者处理
+                throw error;
             }
         });
     }
+    /**
+     * 异步获取两个提交之间的差异信息
+     *
+     * 本函数通过调用API来获取指定的两个提交（fromCommitId和toCommitId）之间的差异信息，包括提交者姓名和差异内容
+     * 主要用于比较代码库中两个提交版本的差异
+     *
+     * @param fromCommitId 起始提交的ID，用于比较的起点
+     * @param toCommitId 结束提交的ID，用于比较的终点
+     * @returns Promise 返回一个Promise，解析为CompareResult对象，包含提交者姓名和差异内容
+     * @throws 当API请求失败或解析响应出错时，抛出错误
+     */
     getDiff(fromCommitId, toCommitId) {
         return __awaiter(this, void 0, void 0, function* () {
+            // 构造请求URL，包含组织ID、仓库ID和比较的提交ID
             const url = `${this.baseUrl}/organizations/${this.orgId}/repositories/${this.repoId}/compares?from=${fromCommitId}&to=${toCommitId}`;
             try {
+                // 发起GET请求到构造的URL，同时设置请求头，包含内容类型和认证信息
                 const response = yield axios_1.default.get(url, {
                     headers: {
                         'Content-Type': 'application/json',
-                        'x-yunxiao-token': this.token,
-                    },
+                        'x-yunxiao-token': this.token
+                    }
                 });
-                return new code_review_patch_1.CompareResult(response.data.committerName, response.data.diffs); // 返回响应数据
+                // 返回响应数据，创建CompareResult对象，传入提交者姓名和差异内容
+                return new code_review_patch_1.CompareResult(response.data.committerName, response.data.diffs);
             }
             catch (error) {
+                // 打印错误信息到控制台，以便调试和日志记录
                 console.error('Error fetching diff patches:', error);
-                throw error; // 抛出错误，以便调用者处理
+                // 抛出错误，以便调用者处理
+                throw error;
             }
         });
     }
+    /**
+     * 在合并请求中发表评论
+     *
+     * 该函数负责将给定的评论内容发布到指定的合并请求中它会对评论内容进行HTML转义，以确保评论文本中的特殊字符不会被错误解析
+     * 函数还会处理网络请求的错误，并将错误信息输出到控制台
+     *
+     * @param r 包含评论信息的对象，包括评论文本、文件名和行号等信息
+     * @param fromPatchSetId 评论来源的补丁集ID
+     * @param toPatchSetId 评论目标的补丁集ID
+     */
     commentOnMR(r, fromPatchSetId, toPatchSetId) {
         return __awaiter(this, void 0, void 0, function* () {
+            // 构建用于提交评论的URL
             const url = `${this.baseUrl}/organizations/${this.orgId}/repositories/${this.repoId}/changeRequests/${this.mrLocalId}/comments`;
             try {
+                // 对评论内容进行HTML转义，以避免XSS攻击
                 const escapedComment = r.comment
-                    .replace(/&/g, "&amp;")
-                    .replace(/</g, "&lt;")
-                    .replace(/>/g, "&gt;")
-                    .replace(/"/g, "&quot;")
-                    .replace(/'/g, "&apos;");
+                    .replace(/&/g, '&amp;')
+                    .replace(/</g, '&lt;')
+                    .replace(/>/g, '&gt;')
+                    .replace(/"/g, '&quot;')
+                    .replace(/'/g, '&apos;');
+                // 构建最终的评论内容
                 const comment = `【本评论来自大模型】\n${escapedComment}`;
+                // 发送POST请求到目标URL，提交评论
                 yield axios_1.default.post(url, {
                     comment_type: 'INLINE_COMMENT',
                     content: comment,
@@ -346,18 +557,20 @@ class CodeupClient {
                     to_patchset_biz_id: toPatchSetId,
                     patchset_biz_id: toPatchSetId,
                     draft: false,
-                    resolved: false,
+                    resolved: false
                 }, {
                     headers: {
                         'Content-Type': 'application/json',
-                        'x-yunxiao-token': this.token,
-                    },
+                        'x-yunxiao-token': this.token
+                    }
                 });
+                // 输出评论信息到控制台，用于调试和日志记录
                 step.info(`Has Commented on ${r.fileName}, line: ${r.lineNumber}:\n${escapedComment}`);
             }
             catch (error) {
+                // 输出错误信息到控制台，并抛出错误，以便调用者处理
                 console.error('Error fetching diff patches:', error);
-                throw error; // 抛出错误，以便调用者处理
+                throw error;
             }
         });
     }
@@ -444,6 +657,29 @@ runStep()
 
 "use strict";
 
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || function (mod) {
+    if (mod && mod.__esModule) return mod;
+    var result = {};
+    if (mod != null) for (var k in mod) if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
+    __setModuleDefault(result, mod);
+    return result;
+};
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
     function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
     return new (P || (P = Promise))(function (resolve, reject) {
@@ -459,6 +695,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.Chat = exports.ReviewResult = void 0;
 const openai_1 = __importDefault(__nccwpck_require__(60047));
+const step = __importStar(__nccwpck_require__(31954));
 class ReviewResult {
     constructor(fileName, lineNumber, comment) {
         this.fileName = fileName;
@@ -475,9 +712,6 @@ class Chat {
             timeout: 600000
         });
         this.temperature = temperature == null || temperature < 0 ? 0.2 : temperature;
-        console.log('llmChat >>>>>> prompt: ', llmChatPrompt);
-        console.log('llmChat >>>>>> modelName: ', modelName);
-        console.log('llmChat >>>>>> temperature: ', this.temperature);
         this.modelName = modelName;
         if (!llmChatPrompt || llmChatPrompt.trim().length < 1) {
             llmChatPrompt = `你是一位资深 Java 开发工程师和代码评审专家，专注于Web应用的安全性、稳定性与性能。
@@ -500,11 +734,26 @@ class Chat {
                                   - 如果有多个问题，每个问题单独成行，按编号顺序列出即可`;
         }
         this.systemPrompt = llmChatPrompt;
+        console.log('llmChat >>>>>> prompt: ', llmChatPrompt);
+        console.log('llmChat >>>>>> modelName: ', modelName);
+        console.log('llmChat >>>>>> temperature: ', temperature);
     }
+    /**
+     * 异步审查代码函数
+     *
+     * 本函数将给定的代码变更提交给AI进行审查，旨在识别可能影响系统稳定性、业务流程、安全性或性能的严重问题
+     *
+     * @param combinedDiff 合并后的完整代码diff内容，用于提供代码变更的上下文
+     * @param fileName 文件名，用于在审查过程中指明具体文件
+     * @param hunks 代码变更块（hunks）的数组，每个元素包含具体的变更内容
+     * @returns 返回一个Promise，解析为ReviewResult对象或null如果审查没有发现问题或问题不严重
+     */
     reviewCode(combinedDiff, fileName, hunks) {
         var _a;
         return __awaiter(this, void 0, void 0, function* () {
+            // 将所有代码变更块的diff合并为一个字符串，以便一次性展示所有待审查的代码
             const hunksDiff = hunks.map(h => h.diff).join('\n');
+            // 构造审查提示，包括文件名、合并后的完整代码diff和待审查的代码块
             const prompt = `请对以下代码变更进行审查：
                         【文件名】：
                         ${fileName}
@@ -516,19 +765,35 @@ class Chat {
                         ${hunksDiff}
                        
                         请严格按照系统提示词中的要求，仅反馈可能影响系统稳定性、业务流程、安全性或性能的严重问题。`;
-            const completion = yield this.openai.chat.completions.create({
-                model: this.modelName,
-                messages: [
-                    { role: 'system', content: this.systemPrompt },
-                    { role: 'user', content: prompt }
-                ],
-                temperature: 0.2,
-                top_p: 0.2
-            });
-            const content = ((_a = completion.choices[0].message.content) === null || _a === void 0 ? void 0 : _a.trim()) || '';
-            return content && content !== '没问题'
-                ? new ReviewResult(fileName, hunks[0].lineNumber, content)
-                : null;
+            // 输出审查开始的日志
+            step.info(`llmChat Reviewer >>>>>> 开始评审 file: ${fileName}`);
+            try {
+                // 使用OpenAI的Chat API创建会话并获取回复
+                const completion = yield this.openai.chat.completions.create({
+                    model: this.modelName,
+                    messages: [
+                        { role: 'system', content: this.systemPrompt },
+                        { role: 'user', content: prompt }
+                    ],
+                    temperature: 0.2,
+                    top_p: 0.2
+                });
+                // 提取AI回复的内容并进行修剪
+                const content = ((_a = completion.choices[0].message.content) === null || _a === void 0 ? void 0 : _a.trim()) || '';
+                // 如果AI回复的内容不为空且不是'没问题'，则创建一个新的ReviewResult对象
+                if (content && content !== '没问题') {
+                    return new ReviewResult(fileName, hunks[0].lineNumber, content);
+                }
+                else {
+                    // 输出审查合格的日志并返回null
+                    step.info(`llmChat Reviewer >>>>>> 评审合格 file: ${fileName}, comment: ${content}`);
+                    return null;
+                }
+            }
+            catch (error) {
+                step.error(`llmChat Reviewer >>>>>> 评审异常 file: ${fileName}, error: ${error}`);
+                return new ReviewResult(fileName, hunks[0].lineNumber, "模型审核异常,请人工处理");
+            }
         });
     }
 }
