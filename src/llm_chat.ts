@@ -70,6 +70,10 @@ export class Chat {
      * @returns 返回一个Promise，解析为ReviewResult对象或null如果审查没有发现问题或问题不严重
      */
     async reviewCode(combinedDiff: string, fileName: string, hunks: Hunk[]): Promise<ReviewResult | null> {
+        if (!hunks || hunks.length === 0) {
+            step.error(`llmChat Reviewer >>>>>> 评审警告: file: ${fileName} hunks为空，无法获取行号`);
+            return null; // 或者根据业务需求返回默认值/抛错
+        }
         // 将所有代码变更块的diff合并为一个字符串，以便一次性展示所有待审查的代码
         const hunksDiff = hunks.map(h => h.diff).join('\n')
 
@@ -103,7 +107,11 @@ export class Chat {
             const content = completion.choices[0].message.content?.trim() || ''
             // 如果AI回复的内容不为空且不是'没问题'，则创建一个新的ReviewResult对象
             if (content && content !== '没问题') {
-                return new ReviewResult(fileName, hunks[0].lineNumber, content);
+                 // 获取待审查的代码块的行号
+                const lineNumber = hunks.length === 1
+                    ? hunks[0].lineNumber
+                    : hunks[Math.floor(hunks.length / 2)].lineNumber;
+                return new ReviewResult(fileName, lineNumber, content);
             } else {
                 // 输出审查合格的日志并返回null
                 step.info(`llmChat Reviewer >>>>>> 评审合格 file: ${fileName}, comment: ${content}`)
