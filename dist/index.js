@@ -475,6 +475,9 @@ class Chat {
             timeout: 600000
         });
         this.temperature = temperature == null || temperature < 0 ? 0.2 : temperature;
+        console.log('llmChat >>>>>> prompt: ', llmChatPrompt);
+        console.log('llmChat >>>>>> modelName: ', modelName);
+        console.log('llmChat >>>>>> temperature: ', this.temperature);
         this.modelName = modelName;
         if (!llmChatPrompt) {
             llmChatPrompt = `你是一位资深 Java 开发工程师和代码评审专家，专注于Web应用的安全性、稳定性与性能。
@@ -517,7 +520,7 @@ class Chat {
                     { role: 'system', content: this.systemPrompt },
                     { role: 'user', content: prompt }
                 ],
-                temperature: this.temperature,
+                temperature: 0.2,
                 top_p: 0.2
             });
             const content = ((_a = completion.choices[0].message.content) === null || _a === void 0 ? void 0 : _a.trim()) || '';
