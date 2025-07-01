@@ -1,13 +1,15 @@
-<div align="center">
+
+
+<div align="center" line-height: 1;>
   <div style="display:flex; align-items:center; justify-content:center; gap:16px; margin-bottom:24px;">
     <img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/git/git-original.svg" alt="Git" width="24" height="24"/>
     <img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/typescript/typescript-original.svg" alt="TypeScript" width="24" height="24"/>
     <img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/nodejs/nodejs-original.svg" alt="Node.js" width="24" height="24"/>
     <img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/npm/npm-original-wordmark.svg" alt="npm" width="24" height="24"/>
-    <img src="data:image/svg+xml;charset=utf-8;base64,PHN2ZyB3aWR0aD0iMjQwIiBoZWlnaHQ9IjI0MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZGVmcz48bGluZWFyR3JhZGllbnQgeDE9Ii0uMDYxJSIgeTE9IjUwLjA5OSUiIHgyPSI5OS45NzklIiB5Mj0iNTAuMDk5JSIgaWQ9ImEiPjxzdG9wIHN0b3AtY29sb3I9IiMwMDZhZDQiIHN0b3Atb3BhY2l0eT0iLjMiIG9mZnNldD0iMCUiLz48c3RvcCBzdG9wLWNvbG9yPSIjMDA2YWQ0IiBvZmZzZXQ9IjEwMCUiLz48L2xpbmVhckdyYWRpZW50PjxsaW5lYXJHcmFkaWVudCB4MT0iNDkuODQ2JSIgeTE9IjEwMC4wMjMlIiB4Mj0iNDkuODQ2JSIgeTI9Ii4wNCUiIGlkPSJiIj48c3RvcCBzdG9wLWNvbG9yPSIjMDA2YWQ0IiBzdG9wLW9wYWNpdHk9Ii41IiBvZmZzZXQ9IjAlIi8+PHN0b3Agc3RvcC1jb2xvcj0iIzAwNmFkNCIgb2Zmc2V0PSIxMDAlIi8+PC9saW5lYXJHcmFkaWVudD48bGluZWFyR3JhZGllbnQgeDE9Ii4wMzUlIiB5MT0iNTAuMjEzJSIgeDI9Ijk5Ljk0NiUiIHkyPSI1MC4yMTMlIiBpZD0iYyI+PHN0b3Agc3RvcC1jb2xvcj0iIzAwNmFkNCIgc3RvcC1vcGFjaXR5PSIuNSIgb2Zmc2V0PSIwJSIvPjxzdG9wIHN0b3AtY29sb3I9IiMwMDZhZDQiIHN0b3Atb3BhY2l0eT0iLjIiIG9mZnNldD0iMTAwJSIvPjwvbGluZWFyR3JhZGllbnQ+PC9kZWZzPjxnIGZpbGw9Im5vbmUiPjxwYXRoIGQ9Ik0xMTkuNjc0IDExNy42ODVIMHYtNDMuMzdoMTE5LjY3NGMyLjM5IDAgNC4zNDQgMi4wMzMgNC4zNDQgNC41MTh2MzQuMzM0YzAgMi40ODUtMS45NTUgNC41MTgtNC4zNDQgNC41MThaIiBmaWxsPSJ1cmwoI2EpIiB0cmFuc2Zvcm09InRyYW5zbGF0ZSg0OCAyNCkiLz48cGF0aCBkPSJNMTcxLjE1IDI0QzE4Mi42NiAyNCAxOTIgMzMuNzEzIDE5MiA0NS42ODVjMCAxMS45NzEtOS4zNCAyMS42ODQtMjAuODUgMjEuNjg0LTExLjUxMiAwLTIwLjg1MS05LjcxMy0yMC44NTEtMjEuNjg0IDAtMTEuOTcyIDkuMzM5LTIxLjY4NSAyMC44NS0yMS42ODVaIiBmaWxsPSIjMDA2YWQ0Ii8+PHBhdGggZD0iTTAgNTYuNDdWMTkybDM0Ljc1MS0xMy4xMDFjNC4zNDQtMS41ODEgNy4xNjgtNS44NzMgNy4xNjgtMTAuNjE3VjQ1LjE3NkM0MS45MTkgMjAuMzMgNjEuNDY2IDAgODUuMzU3IDBINTQuM0MyNC4zMjYgMCAwIDI1LjI5OSAwIDU2LjQ3WiIgZmlsbD0idXJsKCNiKSIgdHJhbnNmb3JtPSJ0cmFuc2xhdGUoNDggMjQpIi8+PHBhdGggZD0iTTEyMy41ODQgMEg4NC40ODlDNjAuODE0LjQ1MiA0MS43IDIwLjMzIDQxLjcgNDUuMTc2djIuNzExYzMuNjkzLTIuNzEgOC4wMzctNC41MTggMTMuMDMyLTQuNTE4SDEyMy44TDEyMy41ODQgMFoiIGZpbGw9InVybCgjYykiIHRyYW5zZm9ybT0idHJhbnNsYXRlKDQ4IDI0KSIvPjwvZz48L3N2Zz4=" alt="Flow" width="24" height="24"/>
-    <img src="https://chat.deepseek.com/favicon.svg" alt="Deepseek" width="24" height="24"/>
+  <a href="https://chat.deepseek.com/"><img alt="Chat"
+      src="https://img.shields.io/badge/🤖%20Chat-DeepSeek%20V3-536af5?color=536af5&logoColor=white"/></a>
   </div>
-
+</div>
 
   <h1 align="center">Flow 自定义AI代码审核步骤</h1>
   <p align="center">基于阿里云云效Flow和大模型的自动化代码审核工具，提升代码质量与开发效率</p>
@@ -199,16 +201,14 @@ const sqlInjectionRule: ReviewRule = {
 ### MR 评论格式
 ```markdown
 【AI代码审查结果】
-
-### 🔍 发现3处潜在问题：
-
-1. **SQL性能问题**：`src/db/query.ts`第12行
+🔍 发现3处潜在问题：
+1. SQL性能问题：`src/db/query.ts`第12行
    > 未添加索引条件，建议为`user_id`字段添加索引以提升查询效率
 
-2. **资源泄漏风险**：`src/service/file.ts`第45行
+2. 资源泄漏风险：`src/service/file.ts`第45行
    > 文件流未显式关闭，建议在`finally`块中添加`stream.end()`
 
-3. **代码冗余**：`src/utils/array.ts`第28-35行
+3. 代码冗余：`src/utils/array.ts`第28-35行
    > 存在重复逻辑，可提取为`filterUnique`工具函数
 ```
 
