@@ -45,5 +45,6 @@ export function getParams(): IParams {
     params.dashscopeApikey = process.env.dashscopeApikey as string
     params.modelName = process.env.modelName as string
     params.llmChatPrompt = process.env.llmChatPrompt as string
+    params.temperature = process.env.temperature as unknown as number
     return params
 }
