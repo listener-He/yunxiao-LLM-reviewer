@@ -46,6 +46,7 @@ const code_review_patch_1 = __nccwpck_require__(66087);
 const codeup_client_1 = __importDefault(__nccwpck_require__(25007));
 const llm_chat_1 = __nccwpck_require__(49251);
 const step = __importStar(__nccwpck_require__(31954));
+const p_limit_1 = __importDefault(__nccwpck_require__(57684));
 const codeReview = (params) => __awaiter(void 0, void 0, void 0, function* () {
     const source = params.getCurrentSourceWithMr();
     if (!source) {
@@ -58,14 +59,25 @@ const codeReview = (params) => __awaiter(void 0, void 0, void 0, function* () {
     const compareResult = yield mrClient.getDiff(crPatches.fromCommitId(), crPatches.toCommitId());
     step.info(`Diff data between last two patches:\n ${compareResult.getCombinedDiff()}`);
     step.info(`Will review file diffs, and comment to this MR: ${mrClient.getMRUrl()}`);
-    const dashscopeChat = new llm_chat_1.Chat(params.dashscopeApikey, params.modelName);
-    for (const hunk of compareResult.getHunks()) {
-        const result = yield dashscopeChat.reviewCode(compareResult.getCombinedDiff(), hunk);
-        if (!result) {
-            continue;
+    const dashscopeChat = new llm_chat_1.Chat(params.dashscopeApikey, params.modelName, params.llmChatPrompt);
+    const hunksByFile = compareResult.getHunks().reduce((acc, hunk) => {
+        if (!acc[hunk.fileName]) {
+            acc[hunk.fileName] = [];
         }
-        yield mrClient.commentOnMR(result, crPatches.fromPatchSetId(), crPatches.toPatchSetId());
-    }
+        acc[hunk.fileName].push(hunk);
+        return acc;
+    }, {});
+    const limit = (0, p_limit_1.default)(30);
+    const promises = Object.entries(hunksByFile).map(([fileName, hunks]) => __awaiter(void 0, void 0, void 0, function* () {
+        return limit(() => __awaiter(void 0, void 0, void 0, function* () {
+            const result = yield dashscopeChat.reviewCode(compareResult.getCombinedDiff(), fileName, hunks);
+            if (!result) {
+                return;
+            }
+            yield mrClient.commentOnMR(result, crPatches.fromPatchSetId(), crPatches.toPatchSetId());
+        }));
+    }));
+    yield Promise.all(promises);
 });
 exports["default"] = codeReview;
 //# sourceMappingURL=code_review.js.map
@@ -136,8 +148,15 @@ class CompareResult {
     getHunks() {
         return this.diffs.flatMap(diff => {
             const lines = diff.diff.split('\n');
-            const fileName = lines[0].replace('--- a/', '');
+            // 判断是否为新增文件（旧文件是 /dev/null）
+            const isNewFile = lines[0].startsWith('--- /dev/null');
+            // 提取文件名行
+            const fileNameLine = isNewFile ? lines[1] : lines[0];
+            // 提取文件名
+            const fileName = fileNameLine.replace(isNewFile ? '+++ b/' : '--- a/', '');
+            // 构建 hunk 头部
             const hunkHead = lines[0] + '\n' + lines[1];
+            // 获取 hunks
             return this.getHunksFromDiff(hunkHead, fileName, lines);
         });
     }
@@ -321,7 +340,7 @@ class CodeupClient {
                     comment_type: 'INLINE_COMMENT',
                     content: comment,
                     file_path: r.fileName,
-                    line_number: r.lineNumber,
+                    line_number: r.lineNumber == -1 ? null : r.lineNumber,
                     from_patchset_biz_id: fromPatchSetId,
                     to_patchset_biz_id: toPatchSetId,
                     patchset_biz_id: toPatchSetId,
@@ -448,30 +467,67 @@ class ReviewResult {
 }
 exports.ReviewResult = ReviewResult;
 class Chat {
-    constructor(apiKey, modelName) {
+    constructor(apiKey, modelName, llmChatPrompt) {
         this.openai = new openai_1.default({
             apiKey: apiKey,
-            baseURL: "https://dashscope.aliyuncs.com/compatible-mode/v1",
+            baseURL: 'https://dashscope.aliyuncs.com/compatible-mode/v1',
             timeout: 600000
         });
         this.modelName = modelName;
+        if (!llmChatPrompt) {
+            llmChatPrompt = `你是一位资深 Java 开发工程师，具备丰富的 Spring Boot 框架和 JDK 17 实践经验 数据库调优能力。请扮演资深代码评审专家,结合审查要求进行代码审查任务
+                                你的任务是对提交的代码变更进行严格审查，聚焦以下七个维度：
+                                1. 代码风格：是否符合主流编码规范（如阿里巴巴 Java 编码规约），命名是否清晰合理，格式是否统一。
+                                2. 冗余代码：是否存在无用的条件判断、重复方法调用、死代码、可简化逻辑等。
+                                3. 逻辑错误：是否有明显逻辑缺陷、边界条件未处理、循环控制不严谨、状态管理混乱等问题。
+                                4. 安全隐患：是否存在潜在安全风险，如日志泄露敏感信息、SQL 注入、XSS、硬编码密码、权限校验缺失等。
+                                5. 潜在问题：是否可能引发并发问题、资源泄漏、空指针异常、性能瓶颈、事务失效、AOP 失效等运行时问题。
+                                6. SQL性能优化：检查数据库操作相关代码，包括但不限于查询语句效率低下、索引未使用、不必要的全表扫描、大事务等。
+                                7. 业务架构与数据模型评审：评估代码实现是否遵循了良好的分层架构原则（如 MVC、DDD），数据模型设计是否合理，关系映射是否准确，以及模块间依赖是否健康。
+                                
+                                输出规则：
+                                - 仅使用中文列出具体问题，无需解释原因
+                                - 若无问题，请直接回复："没问题"
+                                - 禁止使用任何 Markdown 格式
+                                - 不添加任何前缀或后缀内容，如“问题如下：”、“建议：”等
+                                - 每个问题单独成行，编号由系统自动生成，你只需按顺序列出即可
+                                - 如果有多个问题，请分行列出，每行一个问题
+                                
+                                额外指导：
+                                - 对于 SQL 性能问题，注意指出可能导致慢查询的因素，比如缺少必要的索引、未优化的 JOIN 操作等。
+                                - 在业务架构方面，考虑代码是否易于维护、扩展；模块划分是否清晰；接口定义是否合理。
+                                - 数据模型评审应关注实体间的关系是否正确表示，ORM 映射是否合适，以及数据完整性约束。`;
+        }
+        this.systemPrompt = llmChatPrompt;
     }
-    reviewCode(combinedDiff, hunk) {
+    reviewCode(combinedDiff, fileName, hunks) {
+        var _a;
         return __awaiter(this, void 0, void 0, function* () {
-            const prompt = `下面是一段代码Git Diff\n${combinedDiff}\n下面是这段Diff中的一部分局部Diff\n${hunk.diff}\n请结合完整的Diff，在上面的局部Diff中找出可能存在的问题，比如不良的代码风格、无用的代码，错误的逻辑等。用普通文本（非Markdown）直接说明存在的问题（不要加多余的前后缀内容）即可，没问题的部分不用说。如果没有任何问题，则回复'没问题'三个字`;
+            const hunksDiff = hunks.map(h => h.diff).join('\n');
+            const prompt = `请对以下代码变更进行审查：
+                        【文件名】：
+                        ${fileName}
+                        
+                        【合并后的完整代码 diff 内容】：
+                        ${combinedDiff}
+                      
+                        【待审查代码块】：
+                        ${hunksDiff}
+                       
+                        请严格按照审查要求和输出规则进行反馈，并特别关注 SQL 性能优化、业务架构及数据模型的设计合理性。`;
             const completion = yield this.openai.chat.completions.create({
                 model: this.modelName,
                 messages: [
-                    { role: "user", content: prompt }
+                    { role: 'system', content: this.systemPrompt },
+                    { role: 'user', content: prompt }
                 ],
                 temperature: 0.2,
-                top_p: 0.2,
+                top_p: 0.2
             });
-            const content = completion.choices[0].message.content;
-            if ('没问题' === content) {
-                return null;
-            }
-            return new ReviewResult(hunk.fileName, hunk.lineNumber, content);
+            const content = ((_a = completion.choices[0].message.content) === null || _a === void 0 ? void 0 : _a.trim()) || '';
+            return content && content !== '没问题'
+                ? new ReviewResult(fileName, hunks[0].lineNumber, content)
+                : null;
         });
     }
 }
@@ -520,6 +576,7 @@ function getParams() {
     params.sources = process_1.default.env.SOURCES;
     params.dashscopeApikey = process_1.default.env.dashscopeApikey;
     params.modelName = process_1.default.env.modelName;
+    params.llmChatPrompt = process_1.default.env.llmChatPrompt;
     return params;
 }
 exports.getParams = getParams;
@@ -43725,6 +43782,85 @@ module.exports = function (release) {
 
 /***/ }),
 
+/***/ 57684:
+/***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
+
+"use strict";
+
+const Queue = __nccwpck_require__(15185);
+
+const pLimit = concurrency => {
+	if (!((Number.isInteger(concurrency) || concurrency === Infinity) && concurrency > 0)) {
+		throw new TypeError('Expected `concurrency` to be a number from 1 and up');
+	}
+
+	const queue = new Queue();
+	let activeCount = 0;
+
+	const next = () => {
+		activeCount--;
+
+		if (queue.size > 0) {
+			queue.dequeue()();
+		}
+	};
+
+	const run = async (fn, resolve, ...args) => {
+		activeCount++;
+
+		const result = (async () => fn(...args))();
+
+		resolve(result);
+
+		try {
+			await result;
+		} catch {}
+
+		next();
+	};
+
+	const enqueue = (fn, resolve, ...args) => {
+		queue.enqueue(run.bind(null, fn, resolve, ...args));
+
+		(async () => {
+			// This function needs to wait until the next microtask before comparing
+			// `activeCount` to `concurrency`, because `activeCount` is updated asynchronously
+			// when the run function is dequeued and called. The comparison in the if-statement
+			// needs to happen asynchronously as well to get an up-to-date value for `activeCount`.
+			await Promise.resolve();
+
+			if (activeCount < concurrency && queue.size > 0) {
+				queue.dequeue()();
+			}
+		})();
+	};
+
+	const generator = (fn, ...args) => new Promise(resolve => {
+		enqueue(fn, resolve, ...args);
+	});
+
+	Object.defineProperties(generator, {
+		activeCount: {
+			get: () => activeCount
+		},
+		pendingCount: {
+			get: () => queue.size
+		},
+		clearQueue: {
+			value: () => {
+				queue.clear();
+			}
+		}
+	});
+
+	return generator;
+};
+
+module.exports = pLimit;
+
+
+/***/ }),
+
 /***/ 11473:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
@@ -70869,6 +71005,81 @@ if (typeof Buffer.allocUnsafe === "function") {
 function defaultCallback(err) {
   if (err) throw err;
 }
+
+
+/***/ }),
+
+/***/ 15185:
+/***/ ((module) => {
+
+class Node {
+	/// value;
+	/// next;
+
+	constructor(value) {
+		this.value = value;
+
+		// TODO: Remove this when targeting Node.js 12.
+		this.next = undefined;
+	}
+}
+
+class Queue {
+	// TODO: Use private class fields when targeting Node.js 12.
+	// #_head;
+	// #_tail;
+	// #_size;
+
+	constructor() {
+		this.clear();
+	}
+
+	enqueue(value) {
+		const node = new Node(value);
+
+		if (this._head) {
+			this._tail.next = node;
+			this._tail = node;
+		} else {
+			this._head = node;
+			this._tail = node;
+		}
+
+		this._size++;
+	}
+
+	dequeue() {
+		const current = this._head;
+		if (!current) {
+			return;
+		}
+
+		this._head = this._head.next;
+		this._size--;
+		return current.value;
+	}
+
+	clear() {
+		this._head = undefined;
+		this._tail = undefined;
+		this._size = 0;
+	}
+
+	get size() {
+		return this._size;
+	}
+
+	* [Symbol.iterator]() {
+		let current = this._head;
+
+		while (current) {
+			yield current.value;
+			current = current.next;
+		}
+	}
+}
+
+module.exports = Queue;
 
 
 /***/ }),

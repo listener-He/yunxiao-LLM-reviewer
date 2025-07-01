@@ -68,10 +68,12 @@ export class Hunk {
 const hunkStartReg = /@@ -(\d+),\d+ \+(\d+),\d+ @@/
 
 export class CompareResult {
-  diffs: PatchDiff[]
+  diffs: PatchDiff[];
+  committerName: string;
 
-  constructor(diffs: PatchDiff[]) {
+  constructor(committerName: string, diffs: PatchDiff[]) {
     this.diffs = diffs;
+    this.committerName = committerName
   }
 
   getCombinedDiff(): string {

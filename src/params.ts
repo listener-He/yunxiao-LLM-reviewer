@@ -14,6 +14,7 @@ export class IParams {
     sources!: string
     dashscopeApikey!: string
     modelName!: string
+    llmChatPrompt!: string
 
     getCurrentSourceWithMr(): CodeSource | null {
         if(this.sources === null || this.source === null) {
@@ -42,5 +43,6 @@ export function getParams(): IParams {
     params.sources = process.env.SOURCES as string
     params.dashscopeApikey = process.env.dashscopeApikey as string
     params.modelName = process.env.modelName as string
+    params.llmChatPrompt = process.env.llmChatPrompt as string
     return params
 }

@@ -49,7 +49,7 @@ class CodeupClient {
                 },
             });
 
-            return new CompareResult(response.data.diffs) // 返回响应数据
+            return new CompareResult(response.data.committerName, response.data.diffs) // 返回响应数据
         } catch (error) {
             console.error('Error fetching diff patches:', error);
             throw error; // 抛出错误，以便调用者处理
@@ -70,7 +70,7 @@ class CodeupClient {
                 comment_type: 'INLINE_COMMENT',
                 content: comment,
                 file_path: r.fileName,
-                line_number: r.lineNumber,
+                line_number: r.lineNumber == -1 ? null : r.lineNumber,
                 from_patchset_biz_id: fromPatchSetId,
                 to_patchset_biz_id: toPatchSetId,
                 patchset_biz_id: toPatchSetId,
