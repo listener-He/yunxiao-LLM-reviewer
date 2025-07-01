@@ -45,7 +45,7 @@ npm install --registry=https://registry.npmmirror.com
 | `yunxiaoToken`                                               | 云效 Token（可在流水线中配置）为了能够让大模型调用云效API获取合并请求详情，并把Review的结果写到合并请求中，我们需要创建一个云效API的访问令牌。<br/>点击右上角的头像-个人设置-新建令牌，并按照下图中设置令牌的权限：代码比较设置为只读，合并请求设置为读写 |
 | `dashscopeApikey`                                            | 百炼 API Key                                                 |
 | `llmChatPrompt`                                              | 自定义提示词                                                 |
-| [temperature](https://github.com/listener-He/yunxiao-LLM-reviewer/blob/main/step.yaml#L37-L41) | 模型温度值                                                   |
+| `temperature`                                                | 模型温度值                                                   |
 
 ### 3. 构建并运行
 ```bash
@@ -87,34 +87,34 @@ node dist/index.js
 ## 类结构图与设计思路
 
 ### 核心类说明
-#### 1. [IParams](https://github.com/listener-He/yunxiao-LLM-reviewer/blob/main/src/params.ts#L3-L30)
+#### 1. IParams
 负责从环境变量中读取所有必要的参数，包括 token、API 密钥、文件路径等。
 
-#### 2. [CodeSource](https://github.com/listener-He/yunxiao-LLM-reviewer/blob/main/src/code_source.ts#L0-L8)
+#### 2. CodeSource
 表示代码来源，包含仓库地址、项目 ID、合并请求 ID 等信息。
 
 #### 3. `CodeReviewPatch / CodeReviewPatches`
 
 封装了 MR 补丁集的相关信息，支持获取基础补丁集和目标补丁集。
 
-#### 4. [CompareResult](https://github.com/listener-He/yunxiao-LLM-reviewer/blob/main/src/code_review_patch.ts#L117-L328)
+#### 4. CompareResult
 
 解析 Git Diff 数据，提取变更块（hunk），并提供方法将 diff 转换为 Hunk 对象。
 
-#### 5. [Hunk](https://github.com/listener-He/yunxiao-LLM-reviewer/blob/main/src/code_review_patch.ts#L103-L113)
+#### 5. Hunk
 表示一个具体的代码变更块，包含文件名、行号和变更内容。
 
-#### 6. [CodeupClient](https://github.com/listener-He/yunxiao-LLM-reviewer/blob/main/src/codeup_client.ts#L6-L142)
-与 Codeup 平台交互的核心类，负责：
+#### 6. CodeupClient 与 Codeup 
+平台交互的核心类，负责：
 - 获取差异补丁
 - 提交评论到 MR
 - 构建 MR URL
 
 #### 7. `Chat / ReviewResult`
-- [Chat](https://github.com/listener-He/yunxiao-LLM-reviewer/blob/main/src/llm_chat.ts#L19-L116): 封装与大模型的交互逻辑，发送请求并接收审查结果。
-- [ReviewResult](https://github.com/listener-He/yunxiao-LLM-reviewer/blob/main/src/llm_chat.ts#L5-L17): 表示模型返回的审查结果，包含文件名、行号和问题描述。
+- Chat: 封装与大模型的交互逻辑，发送请求并接收审查结果。
+- ReviewResult: 表示模型返回的审查结果，包含文件名、行号和问题描述。
 
-#### 8. [codeReview](https://github.com/listener-He/yunxiao-LLM-reviewer/blob/main/src/code_review.ts#L19-L72)
+#### 8. codeReview
 主流程函数，整合所有组件，函数协调整个流程，控制 MR 审查的开始、执行和结束 完成整个审查流程。
 
 ### 异步并发处理
