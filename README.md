@@ -1,6 +1,6 @@
 
 
-<div align="center" line-height: 1;>
+<div align="center">
   <div style="display:flex; align-items:center; justify-content:center; gap:16px; margin-bottom:24px;">
     <img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/git/git-original.svg" alt="Git" width="24" height="24"/>
     <img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/typescript/typescript-original.svg" alt="TypeScript" width="24" height="24"/>
@@ -14,7 +14,7 @@
   <h1 align="center">Flow 自定义AI代码审核步骤</h1>
   <p align="center">基于阿里云云效Flow和大模型的自动化代码审核工具，提升代码质量与开发效率</p>
 
-  <div style="display:flex; justify-content:center; gap:16px; margin:24px 0;">
+  <div align="center" style="display:flex; justify-content:center; gap:16px; margin:24px 0;">
     <a href="https://github.com/listener-He/yunxiao-LLM-reviewer/blob/main/LICENSE">
       <img src="https://img.shields.io/github/license/listener-He/yunxiao-LLM-reviewer.svg" alt="License">
     </a>
