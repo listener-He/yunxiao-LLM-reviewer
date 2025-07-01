@@ -109,7 +109,6 @@ node dist/index.js
    ```
 
    > 注：flow-cli的详细操作可参见文档: https://help.aliyun.com/zh/yunxiao/user-guide/use-flow-cli-to-customize-development-steps
-   >
    > 步骤发布后，访问: https://flow.aliyun.com 在步骤管理-组织步骤中可以看到MergeRequestLLMReviewer 步骤，即表示步骤发布成功。如果你看不到步骤管理菜单项，是因为你当前账号没有步骤管理的权限，可以切换为管理员账号或者让管理员赋予你步骤管理的权限。
 
 5. 在云效流水线编辑页的 **变量与缓存** 中配置 `YUNXIAO_TOKEN` 和 `BAILIAN_APIKEY`。选择使用模型
