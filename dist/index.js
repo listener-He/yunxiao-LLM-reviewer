@@ -474,7 +474,7 @@ class Chat {
             baseURL: 'https://dashscope.aliyuncs.com/compatible-mode/v1',
             timeout: 600000
         });
-        this.temperature = temperature;
+        this.temperature = temperature == null || temperature < 0 ? 0.2 : temperature;
         this.modelName = modelName;
         if (!llmChatPrompt) {
             llmChatPrompt = `你是一位资深 Java 开发工程师和代码评审专家，专注于Web应用的安全性、稳定性与性能。
@@ -573,6 +573,7 @@ function getParams() {
     params.dashscopeApikey = process_1.default.env.dashscopeApikey;
     params.modelName = process_1.default.env.modelName;
     params.llmChatPrompt = process_1.default.env.llmChatPrompt;
+    params.temperature = process_1.default.env.temperature;
     return params;
 }
 exports.getParams = getParams;

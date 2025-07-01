@@ -24,12 +24,13 @@ graph TD
 
 ## 自定义参数说明
 
-| 参数名称             | 类型     | 描述                                                                 |
-|----------------------|----------|----------------------------------------------------------------------|
-| `modelName`          | 下拉框   | 模型名称，支持 `deepseek-r1`, `deepseek-v3`, `qwen-max`, `qwen-turbo-latest`, `qwen-turbo`, `qwen-plus` |
-| `yunxiaoToken`       | 输入框   | 云效 Token，可在流水线编辑页的变量与缓存中配置                       |
-| `dashscopeApikey`    | 输入框   | 百炼 API Key，可在流水线编辑页的变量与缓存中配置                     |
-| `llmChatPrompt`      | 输入框   | 大模型提示词，默认提供了一套标准的审查要求                           |
+| 参数名称                  | 类型     | 描述                                                                                               |
+|-----------------------|----------|--------------------------------------------------------------------------------------------------|
+| `modelName`           | 下拉框   | 模型名称，支持 `deepseek-r1`, `deepseek-v3`, `qwen-max`, `qwen-turbo-latest`, `qwen-turbo`, `qwen-plus` |
+| `yunxiaoToken`        | 输入框   | 云效 Token，可在流水线编辑页的变量与缓存中配置                                                                       |
+| `dashscopeApikey`     | 输入框   | 百炼 API Key，可在流水线编辑页的变量与缓存中配置                                                                     |
+| `llmChatPrompt`       | 输入框   | 大模型提示词，默认提供了一套标准的审查要求                                                                            |
+| `temperature`         | 输入框   | 大模型温度值                                                                                           |
 
 ## 输出结果
 
