@@ -20,7 +20,7 @@ const codeReview = async (params: IParams) => {
   step.info(`Diff data between last two patches:\n ${compareResult.getCombinedDiff()}`);
   
   step.info(`Will review file diffs, and comment to this MR: ${mrClient.getMRUrl()}`)
-  const dashscopeChat = new Chat(params.dashscopeApikey, params.modelName, params.llmChatPrompt)
+  const dashscopeChat = new Chat(params.dashscopeApikey, params.modelName, params.llmChatPrompt, params.temperature)
   
   const hunksByFile = compareResult.getHunks().reduce((acc, hunk) => {
     if (!acc[hunk.fileName]) {

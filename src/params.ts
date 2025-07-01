@@ -15,6 +15,7 @@ export class IParams {
     dashscopeApikey!: string
     modelName!: string
     llmChatPrompt!: string
+    temperature!: number
 
     getCurrentSourceWithMr(): CodeSource | null {
         if(this.sources === null || this.source === null) {
