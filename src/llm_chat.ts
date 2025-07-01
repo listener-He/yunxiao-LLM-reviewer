@@ -107,6 +107,7 @@ export class Chat {
             const content = completion.choices[0].message.content?.trim() || ''
             // 如果AI回复的内容不为空且不是'没问题'，则创建一个新的ReviewResult对象
             if (content && content !== '没问题') {
+                // 获取待审查的代码块的行号
                 const lineNumber = hunks.length === 1
                     ? hunks[0].lineNumber
                     : hunks[Math.floor(hunks.length / 2)].lineNumber;
