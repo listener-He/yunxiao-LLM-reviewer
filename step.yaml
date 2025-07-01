@@ -1,7 +1,7 @@
 ---
 apiVersion: v2
 kind: DefaultJob
-id: MergeRequestLLMReviewer_12345678_optimize
+id: MergeRequestLLMReviewer_665ec846262ae18c316677c2_optimize
 name: 自动化AI代码审核
 description: 使用大模型来对codeup的merge request进行review，并自动提交评论
 helpUrl: https://help.aliyun.com/zh/yunxiao/user-guide/use-flow-cli-to-customize-development-steps
