@@ -35,7 +35,7 @@ export class Chat {
         console.log('llmChat >>>>>> modelName: ', modelName)
         console.log('llmChat >>>>>> temperature: ', this.temperature)
         this.modelName = modelName
-        if (!llmChatPrompt) {
+        if (!llmChatPrompt || llmChatPrompt.trim().length < 1) {
             llmChatPrompt = `你是一位资深 Java 开发工程师和代码评审专家，专注于Web应用的安全性、稳定性与性能。
                              你的任务是对提交的代码变更进行严格审查    
                                 仅指出以下类型的严重问题： 
