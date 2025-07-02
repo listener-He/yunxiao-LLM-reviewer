@@ -4,6 +4,50 @@ import {ReviewResult} from './llm_chat'
 import CodeSource from './code_source'
 import {CompareResult} from './code_review_patch'
 
+/**
+ * MergeRequestDetail - 获取合并请求的完整响应结构
+ */
+export interface MergeRequestDetail {
+    code: number;
+    message: string;
+    requestId?: string;
+    data: MergeRequestData;
+}
+
+export interface MergeRequestData {
+    id: string;                // 合并请求 ID
+    title: string;             // 标题
+    description: string;       // 描述
+    sourceBranch: string;      // 源分支
+    targetBranch: string;      // 目标分支
+    status: MergeRequestStatus; // 状态
+    creatorName: string;       // 创建人姓名
+    createdAt: string;         // 创建时间 (ISO 8601)
+    updatedAt: string;         // 最后更新时间
+    mergedAt: string | null;   // 合并时间（可能为空）
+    closedAt: string | null;   // 关闭时间（可能为空）
+    assigneeUser: AssigneeUser | null; // 分配人信息（可能为空）
+    repository: RepositoryInfo; // 所属仓库信息
+}
+
+export type MergeRequestStatus =
+    | 'OPEN'
+    | 'MERGED'
+    | 'CLOSED'
+    | 'CHECKING'
+    | 'CHANGES_REQUESTED'
+    | 'APPROVED';
+
+export interface AssigneeUser {
+    userId: string;
+    realName: string;
+}
+
+export interface RepositoryInfo {
+    id: number;
+    name: string;
+}
+
 class CodeupClient {
     private baseUrl: string
     private token: string
@@ -20,6 +64,63 @@ class CodeupClient {
         this.repoId = source?.data?.projectId
         this.mrLocalId = source?.data?.codeupMrLocalId
     }
+
+    /**
+     * 获取指定仓库中某个文件的内容
+     *
+     * @param filePath 文件在仓库中的路径
+     * @param ref 指定的ref，可以是分支名或提交ID
+     * @returns 返回一个Promise，解析为文件内容
+     */
+    public async getFileBlob(filePath: string, ref: string): Promise<string> {
+        const url = `${this.baseUrl}/organizations/${this.orgId}/repositories/${this.repoId}/files/${encodeURIComponent(filePath)}?ref=${encodeURIComponent(ref)}`
+        try {
+            const response: AxiosResponse = await axios.get(url, {
+                headers: {
+                    'Content-Type': 'application/json',
+                    'x-yunxiao-token': this.token
+                }
+            })
+            // 假设返回的数据结构中 content 字段包含文件内容
+            if (!response.data) {
+                return "";
+            }
+            return response.data.content
+        } catch (error) {
+            console.error(`Error fetching file ${filePath} blob:`, error)
+            return "";
+        }
+    }
+
+
+    /**
+     * 获取当前合并请求的详细信息
+     *
+     * @returns 返回一个Promise，解析为合并请求的详细信息对象
+     */
+    public async getMergeRequest(): Promise<MergeRequestDetail> {
+        // 构造请求URL
+        const url = `${this.baseUrl}/organizations/${this.orgId}/repositories/${this.repoId}/changeRequests/${this.mrLocalId}`
+
+        try {
+            // 发送GET请求获取MR详情
+            const response: AxiosResponse = await axios.get(url, {
+                headers: {
+                    'Content-Type': 'application/json',
+                    'x-yunxiao-token': this.token
+                }
+            })
+
+            // 返回响应数据
+            return response.data
+        } catch (error) {
+            // 输出错误信息到控制台
+            console.error('Error fetching merge request details:', error)
+            // 抛出错误，以便调用者处理
+            throw error
+        }
+    }
+
 
     /**
      * 异步获取差异补丁信息

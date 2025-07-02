@@ -25,6 +25,7 @@ const codeReview = async (params: IParams) => {
         step.info('Repository in current folder is not triggered by MergeRequest. Skip')
         return
     }
+    step.info(`Repository in current folder is triggered by MergeRequest: ${source.data.codeupMrLocalId}`)
 
     // 创建代码审查客户端，用于与代码平台交互
     const mrClient = new CodeupClient(params.yunxiaoToken, params.orgId, source)
@@ -35,13 +36,14 @@ const codeReview = async (params: IParams) => {
     // 获取两个补丁之间的差异详细信息
     const compareResult: CompareResult = await mrClient.getDiff(crPatches.fromCommitId(), crPatches.toCommitId())
     // 输出差异信息
-    step.info(`Diff data between last two patches:\n ${compareResult.getCombinedDiff()}`)
+    step.info(`Diff data between last two patches: ${compareResult.diffs.length} 个差异`)
 
     // 准备开始代码审查，并提供合并请求的链接
     step.info(`Will review file diffs, and comment to this MR: ${mrClient.getMRUrl()}`)
     // 创建聊天客户端，用于代码审查的AI辅助
     const dashscopeChat = new Chat(params.dashscopeApikey, params.modelName, params.llmChatPrompt, params.temperature)
-
+    // const mergeRequestDetail = await mrClient.getMergeRequest();
+    // step.info(`MergeRequest Detail: ${JSON.stringify(mergeRequestDetail)}`)
     // 将差异信息按文件名分组
     const hunksByFile = compareResult.getHunks().reduce((acc, hunk) => {
         if (!acc[hunk.fileName]) {
@@ -57,8 +59,9 @@ const codeReview = async (params: IParams) => {
     // 对每个文件的差异进行代码审查，并发布评论
     const promises = Object.entries(hunksByFile).map(async ([fileName, hunks]) => {
         return limit(async () => {
-            // 使用AI辅助审查代码，并获取审查结果
-            const result = await dashscopeChat.reviewCode(compareResult.getCombinedDiff(), fileName, hunks)
+            //const fileContent = await mrClient.getFileBlob(fileName, mergeRequestDetail.data.targetBranch)
+            // 使用AI辅助审查代码，并获取审查结果 // compareResult.getCombinedDiff()
+            const result = await dashscopeChat.reviewCode("", fileName, hunks)
             // 如果审查结果为空，则不执行任何操作
             if (!result) {
                 return
