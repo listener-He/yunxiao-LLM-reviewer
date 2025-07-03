@@ -59,7 +59,7 @@ export class Chat {
                                   - 若无问题，请直接回复："没问题" 
                                   - 禁止使用任何 Markdown 格式 
                                   - 不添加任何前缀或后缀内容，如“问题如下：”、“建议：”等 
-                                  - 如果有多个问题，每个问题单独成行，按编号顺序列出即可`
+                                  - 如果有多个问题，每个问题单独成行，按编号顺序换行列出即可`
         }
         this.systemPrompt = llmChatPrompt
         console.log('llmChat >>>>>> prompt: ', llmChatPrompt)
