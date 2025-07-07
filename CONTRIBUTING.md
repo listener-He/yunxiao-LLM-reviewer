@@ -1,5 +1,3 @@
-以下是一份适用于 `yunxiao-LLM-reviewer` 项目的标准 `CONTRIBUTING.md` 内容，结合了该项目的特点和需求：
-
 # 贡献指南
 
 欢迎为 `yunxiao-LLM-reviewer` 项目贡献代码或提出建议！本指南将帮助你了解如何参与项目开发和贡献。
