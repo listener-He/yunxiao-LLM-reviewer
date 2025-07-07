@@ -232,7 +232,7 @@ class CodeupClient {
      * @returns 返回一个Promise，解析为文件内容
      */
     public async getFileBlob(filePath: string, ref: string): Promise<string> {
-        const url = `${this.baseUrl}/organizations/${this.orgId}/repositories/${this.repoId}/files/${encodeURIComponent(filePath)}?ref=${encodeURIComponent(ref)}`
+        const url = `${this.baseUrl}/organizations/${this.orgId}/repositories/${this.repoId}/files/${encodeURIComponent(filePath)}?ref=${ref}`
         try {
             const response: AxiosResponse = await axios.get(url, {
                 headers: {
