@@ -41,7 +41,7 @@ const codeReview = async (params: IParams) => {
     // 准备开始代码审查，并提供合并请求的链接
     step.info(`Will review file diffs, and comment to this MR: ${mrClient.getMRUrl()}`)
     // 创建聊天客户端，用于代码审查的AI辅助
-    const dashscopeChat = new Chat(params.dashscopeApikey, params.modelName, params.llmChatPrompt, params.temperature)
+    const dashscopeChat = new Chat(params.dashscopeApikey, params.modelName, params.llmChatPrompt, params.temperature, params.aiBaseUrl)
     const mergeRequestDetail: MergeRequestResponse = await mrClient.getMergeRequest();
     if (mergeRequestDetail != null) {
         step.info(`Diff Request >>>>>> Merge Title: ${mergeRequestDetail.title}`)

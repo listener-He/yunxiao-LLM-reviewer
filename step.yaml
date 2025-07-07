@@ -30,7 +30,12 @@ items:
     name: yunxiaoToken
     type: input
     description: 可以引用私密配置项 ${YUNXIAO_TOKEN},需要在流水线编辑页的变量与缓存中配置该变量的具体值
-  - label: 百炼APIKey
+  - label: 模型BaseUrl
+    name: aiBaseUrl
+    type: input
+    description: 配置模型厂商API地址，默认为 https://dashscope.aliyuncs.com/compatible-mode/v1
+    value: https://dashscope.aliyuncs.com/compatible-mode/v1
+  - label: APIKey
     name: dashscopeApikey
     type: input
     description: 可以引用私密配置项 ${BAILIAN_APIKEY},需要在流水线编辑页的变量与缓存中配置该变量的具体值

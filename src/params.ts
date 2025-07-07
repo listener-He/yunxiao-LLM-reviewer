@@ -16,6 +16,7 @@ export class IParams {
     modelName!: string
     llmChatPrompt!: string
     temperature!: number
+    aiBaseUrl!: string
 
     getCurrentSourceWithMr(): CodeSource | null {
         if(this.sources === null || this.source === null) {
@@ -47,5 +48,6 @@ export function getParams(): IParams {
     params.modelName = process.env.modelName as string
     params.llmChatPrompt = process.env.llmChatPrompt as string
     params.temperature = process.env.temperature as unknown as number
+    params.aiBaseUrl = process.env.aiBaseUrl as string
     return params
 }

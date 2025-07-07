@@ -23,11 +23,11 @@ export class Chat {
     systemPrompt: string
     temperature: number
 
-    constructor(apiKey: string, modelName: string, llmChatPrompt: string, temperature: any) {
+    constructor(apiKey: string, modelName: string, llmChatPrompt: string, temperature: any, aiBaseUrl: string) {
         this.openai = new OpenAI(
             {
                 apiKey: apiKey,
-                baseURL: 'https://dashscope.aliyuncs.com/compatible-mode/v1',
+                baseURL: aiBaseUrl ? aiBaseUrl : 'https://dashscope.aliyuncs.com/compatible-mode/v1',
                 timeout: 600000
             }
         )
