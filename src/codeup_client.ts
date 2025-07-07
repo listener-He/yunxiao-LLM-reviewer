@@ -5,48 +5,207 @@ import CodeSource from './code_source'
 import {CompareResult} from './code_review_patch'
 
 /**
- * MergeRequestDetail - 获取合并请求的完整响应结构
+ * Merge Request 响应类定义
+ * 对应阿里云 Yunxiao API 的 GetChangeRequest 查询合并请求接口
+ * 文档地址: https://help.aliyun.com/zh/yunxiao/developer-reference/getchangerequest-query-merge-request
  */
-export interface MergeRequestDetail {
-    code: number;
-    message: string;
-    requestId?: string;
-    data: MergeRequestData;
+export interface MergeRequestResponse {
+    /**
+     * 当前分支领先目标分支的提交数（即 ahead 的提交数量）
+     */
+    ahead: number;
+
+    /**
+     * 所有合并要求是否都通过，true 表示可以合并，false 表示不能合并
+     */
+    allRequirementsPass: boolean;
+
+    /**
+     * MR 创建者信息
+     */
+    author: AuthorInfo;
+
+    /**
+     * 当前分支落后目标分支的提交数（即 behind 的提交数量）
+     */
+    behind: number;
+
+    /**
+     * 业务 ID，唯一标识一个 MR 的业务编号
+     */
+    bizId: string;
+
+    /**
+     * 是否可以执行 revert 或 cherry pick 操作
+     */
+    canRevertOrCherryPick: boolean;
+
+    /**
+     * 变更大小的分类（S、M、L 等）
+     */
+    changeSizeBucket: string;
+
+    /**
+     * 合并检查项列表
+     */
+    checkList: CheckListItem[];
+
+    /**
+     * MR 的创建来源，例如 WEB、API 等
+     */
+    createFrom: string;
+
+    /**
+     * MR 创建时间（ISO8601 格式）
+     */
+    createTime: string;
+
+    /**
+     * MR 的详细页面 URL
+     */
+    detailUrl: string;
+
+    /**
+     * 是否已经被 revert
+     */
+    hasReverted: boolean;
+
+    /**
+     * 本地 ID，表示 MR 在项目中的唯一编号
+     */
+    localId: number;
+
+    /**
+     * MR 类型，如 CODE_REVIEW、BUG_FIX 等
+     */
+    mrType: string;
+
+    /**
+     * 项目 ID
+     */
+    projectId: number;
+
+    /**
+     * MR 的评审人列表
+     */
+    reviewers: ReviewerInfo[];
+
+    /**
+     * 源分支名称
+     */
+    sourceBranch: string;
+
+    /**
+     * 源项目 ID
+     */
+    sourceProjectId: number;
+
+    /**
+     * MR 当前状态，如 UNDER_REVIEW, MERGED 等
+     */
+    status: string;
+
+    /**
+     * 订阅者列表（当前未使用）
+     */
+    subscribers: any[];
+
+    /**
+     * 是否支持 fast-forward 合并方式
+     */
+    supportMergeFastForwardOnly: boolean;
+
+    /**
+     * 目标分支名称
+     */
+    targetBranch: string;
+
+    /**
+     * 目标项目 ID
+     */
+    targetProjectId: number;
+
+    /**
+     * 目标项目的命名空间 + 名称
+     */
+    targetProjectNameWithNamespace: string;
+
+    /**
+     * 目标项目的命名空间 + 路径
+     */
+    targetProjectPathWithNamespace: string;
+
+    /**
+     * MR 标题
+     */
+    title: string;
+
+    /**
+     * 总评论数
+     */
+    totalCommentCount: number;
+
+    /**
+     * 未解决的评论数
+     */
+    unResolvedCommentCount: number;
+
+    /**
+     * MR 最后更新时间（ISO8601 格式）
+     */
+    updateTime: string;
+
+    /**
+     * 项目主页 URL
+     */
+    webUrl: string;
 }
 
-export interface MergeRequestData {
-    id: string;                // 合并请求 ID
-    title: string;             // 标题
-    description: string;       // 描述
-    sourceBranch: string;      // 源分支
-    targetBranch: string;      // 目标分支
-    status: MergeRequestStatus; // 状态
-    creatorName: string;       // 创建人姓名
-    createdAt: string;         // 创建时间 (ISO 8601)
-    updatedAt: string;         // 最后更新时间
-    mergedAt: string | null;   // 合并时间（可能为空）
-    closedAt: string | null;   // 关闭时间（可能为空）
-    assigneeUser: AssigneeUser | null; // 分配人信息（可能为空）
-    repository: RepositoryInfo; // 所属仓库信息
+/**
+ * MR 创建者信息
+ */
+export interface AuthorInfo {
+    avatar: string;        // 头像链接
+    email: string;         // 邮箱
+    id: number;            // 用户 ID
+    name: string;          // 用户姓名
+    state: string;         // 用户状态（active/inactive）
+    userId: string;        // 用户唯一标识
+    username: string;      // 登录用户名
 }
 
-export type MergeRequestStatus =
-    | 'OPEN'
-    | 'MERGED'
-    | 'CLOSED'
-    | 'CHECKING'
-    | 'CHANGES_REQUESTED'
-    | 'APPROVED';
-
-export interface AssigneeUser {
-    userId: string;
-    realName: string;
+/**
+ * MR 审核人信息
+ */
+export interface ReviewerInfo {
+    avatar: string;        // 头像链接
+    email: string;         // 邮箱
+    hasCommented: boolean; // 是否已评论
+    hasReviewed: boolean;  // 是否已审核
+    id: number;            // 用户 ID
+    name: string;          // 用户姓名
+    reviewTime: null | string; // 审核时间（可能为空）
+    state: string;         // 用户状态（active/inactive）
+    userId: string;        // 用户唯一标识
+    username: string;      // 登录用户名
 }
 
-export interface RepositoryInfo {
-    id: number;
-    name: string;
+/**
+ * MR 合并检查项
+ */
+export interface CheckListItem {
+    needAttentionItems: any[]; // 需要关注的检查项（当前为空）
+    requirementRuleItems: RequirementRuleItem[]; // 合并规则检查项
 }
+
+/**
+ * MR 合并规则检查项
+ */
+export interface RequirementRuleItem {
+    itemType: string;     // 检查类型，如 MERGE_CONFLICT_CHECK、REVIEWER_APPROVED_CHECK、CI_CHECK
+    pass: boolean;        // 是否通过检查
+}
+
 
 class CodeupClient {
     private baseUrl: string
@@ -85,9 +244,16 @@ class CodeupClient {
             if (!response.data) {
                 return "";
             }
-            return response.data.content
+            if (!response.data.content) {
+                return "";
+            }
+            if (!response.data.encoding || response.data.encoding === 'text') {
+                return response.data.content
+            }
+            // content base64
+            return Buffer.from(response.data.content, 'base64').toString('utf-8')
         } catch (error) {
-            console.error(`Error fetching file ${filePath} blob:`, error)
+            console.error(`Query ref: ${ref} fileContent path: ${filePath} Error fetching file ${filePath} blob:`, error)
             return "";
         }
     }
@@ -98,7 +264,7 @@ class CodeupClient {
      *
      * @returns 返回一个Promise，解析为合并请求的详细信息对象
      */
-    public async getMergeRequest(): Promise<MergeRequestDetail> {
+    public async getMergeRequest(): Promise<MergeRequestResponse> {
         // 构造请求URL
         const url = `${this.baseUrl}/organizations/${this.orgId}/repositories/${this.repoId}/changeRequests/${this.mrLocalId}`
 

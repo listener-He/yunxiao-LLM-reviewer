@@ -1,5 +1,5 @@
 import {CodeReviewPatch, CodeReviewPatches, CompareResult, Hunk} from './code_review_patch'
-import CodeupClient from './codeup_client'
+import CodeupClient, {MergeRequestResponse} from './codeup_client'
 import {Chat} from './llm_chat'
 import {IParams} from './params'
 import * as step from '@flow-step/step-toolkit'
@@ -42,8 +42,11 @@ const codeReview = async (params: IParams) => {
     step.info(`Will review file diffs, and comment to this MR: ${mrClient.getMRUrl()}`)
     // 创建聊天客户端，用于代码审查的AI辅助
     const dashscopeChat = new Chat(params.dashscopeApikey, params.modelName, params.llmChatPrompt, params.temperature)
-    // const mergeRequestDetail = await mrClient.getMergeRequest();
-    // step.info(`MergeRequest Detail: ${JSON.stringify(mergeRequestDetail)}`)
+    const mergeRequestDetail: MergeRequestResponse = await mrClient.getMergeRequest();
+    if (mergeRequestDetail != null) {
+        step.info(`Diff Request >>>>>> Merge Title: ${mergeRequestDetail.title}`)
+    }
+
     // 将差异信息按文件名分组
     const hunksByFile = compareResult.getHunks().reduce((acc, hunk) => {
         if (!acc[hunk.fileName]) {
@@ -59,9 +62,9 @@ const codeReview = async (params: IParams) => {
     // 对每个文件的差异进行代码审查，并发布评论
     const promises = Object.entries(hunksByFile).map(async ([fileName, hunks]) => {
         return limit(async () => {
-            //const fileContent = await mrClient.getFileBlob(fileName, mergeRequestDetail.data.targetBranch)
+            const afterFileContent = await mrClient.getFileBlob(fileName, mergeRequestDetail.sourceBranch)
             // 使用AI辅助审查代码，并获取审查结果 // compareResult.getCombinedDiff()
-            const result = await dashscopeChat.reviewCode("", fileName, hunks)
+            const result = await dashscopeChat.reviewCode(afterFileContent, fileName, hunks)
             // 如果审查结果为空，则不执行任何操作
             if (!result) {
                 return
