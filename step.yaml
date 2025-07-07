@@ -30,7 +30,12 @@ items:
     name: yunxiaoToken
     type: input
     description: 可以引用私密配置项 ${YUNXIAO_TOKEN},需要在流水线编辑页的变量与缓存中配置该变量的具体值
-  - label: 百炼APIKey
+  - label: 模型BaseUrl
+    name: aiBaseUrl
+    type: input
+    description: 配置模型厂商API地址，默认为 "https://dashscope.aliyuncs.com/compatible-mode/v1"
+    value: "https://dashscope.aliyuncs.com/compatible-mode/v1"
+  - label: APIKey
     name: dashscopeApikey
     type: input
     description: 可以引用私密配置项 ${BAILIAN_APIKEY},需要在流水线编辑页的变量与缓存中配置该变量的具体值
@@ -42,7 +47,7 @@ items:
   - label: 大模型提示词
     name: llmChatPrompt
     type: input
-    description: "调用大模型时的默认系统角色：你是一位资深 Java 开发工程师和代码评审专家，专注于Web应用的安全性、稳定性与性能。
+    description: "调用大模型时的系统角色：你是一位资深 Java 开发工程师和代码评审专家，专注于Web应用的安全性、稳定性与性能。
        你的任务是对提交的代码变更进行严格审查    
           仅指出以下类型的严重问题： 
             1. 逻辑错误：可能导致业务流程异常、数据不一致、死循环、方法内执行逻辑不自洽的空指针、逻辑缺陷、边界条件未处理、循环控制不严谨、状态管理混乱等运行时崩溃。 
@@ -56,7 +61,7 @@ items:
             严重 - 逻辑错误/安全隐患/资源泄漏/并发问题导致系统崩溃/数据泄露/性能灾难/循环嵌套深度>3/递归调用逻辑的终止条件/循环中调用接口或数据库
             优化 - SQL性能缺陷/可预见的性能瓶颈/大数据量的查询
             建议 - 代码风格/可读性/冗余代码/潜在风险点
-            普通 - 命名规范/空行/日志打印/格式美化                 
+            普通 - 命名规范/空行/日志打印/格式美化              
           输出规则： 
             - 仅列出严重影响系统运行、安全或性能的问题
             - 不输出无关紧要的内容（如命名规范、空行、日志打印、格式美化）
