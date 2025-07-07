@@ -16,12 +16,14 @@ export class IParams {
     modelName!: string
     llmChatPrompt!: string
     temperature!: number
+    aiBaseUrl!: string
 
     getCurrentSourceWithMr(): CodeSource | null {
         if(this.sources === null || this.source === null) {
             return null;
         }
         const sources: CodeSource[] = JSON.parse(this.sources!)
+        console.log('getCurrentSourceWithMr >>>>>> sources: ', sources)
         const currentSource = sources.filter(source => source.type === 'codeup' && source.name === this.source!)
         if(currentSource.length === 1 && !!currentSource[0].data?.codeupMrLocalId) {
             return currentSource[0]
@@ -46,5 +48,6 @@ export function getParams(): IParams {
     params.modelName = process.env.modelName as string
     params.llmChatPrompt = process.env.llmChatPrompt as string
     params.temperature = process.env.temperature as unknown as number
+    params.aiBaseUrl = process.env.aiBaseUrl as string
     return params
 }
