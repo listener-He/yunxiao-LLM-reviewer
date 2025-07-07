@@ -33,8 +33,8 @@ items:
   - label: 模型BaseUrl
     name: aiBaseUrl
     type: input
-    description: 配置模型厂商API地址，默认为 https://dashscope.aliyuncs.com/compatible-mode/v1
-    value: https://dashscope.aliyuncs.com/compatible-mode/v1
+    description: 配置模型厂商API地址，默认为 "https://dashscope.aliyuncs.com/compatible-mode/v1"
+    value: "https://dashscope.aliyuncs.com/compatible-mode/v1"
   - label: APIKey
     name: dashscopeApikey
     type: input
