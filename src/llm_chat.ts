@@ -23,11 +23,11 @@ export class Chat {
     systemPrompt: string
     temperature: number
 
-    constructor(apiKey: string, modelName: string, llmChatPrompt: string, temperature: any) {
+    constructor(apiKey: string, modelName: string, llmChatPrompt: string, temperature: any, aiBaseUrl: string) {
         this.openai = new OpenAI(
             {
                 apiKey: apiKey,
-                baseURL: 'https://dashscope.aliyuncs.com/compatible-mode/v1',
+                baseURL: aiBaseUrl ? aiBaseUrl : 'https://dashscope.aliyuncs.com/compatible-mode/v1',
                 timeout: 600000
             }
         )
@@ -37,7 +37,7 @@ export class Chat {
                 : 0.2
         this.modelName = modelName
         if (!llmChatPrompt || llmChatPrompt.trim().length < 1) {
-            llmChatPrompt = `你是一位资深 Java 开发工程师和代码评审专家，专注于Web应用的安全性、稳定性与性能。
+            llmChatPrompt = `你是一位资深Java开发工程师和代码评审专家 专注于Web应用的安全性、稳定性与性能。
                              你的任务是对提交的代码变更进行严格审查    
                                 仅指出以下类型的严重问题： 
                                   1. 逻辑错误：可能导致业务流程异常、逻辑冲突、数据不一致、死循环、执行逻辑不自洽、逻辑缺陷、边界条件未处理、循环控制不严谨、状态管理混乱等运行时崩溃。 
@@ -46,25 +46,26 @@ export class Chat {
                                   4. 并发问题：是否有较大可能引发并发问题、资源泄漏、性能瓶颈等运行时问题。 
                                   5. SQL性能优化：仅限数据库操作代码，如慢查询、全表扫描、缺少索引、N+1 查询、大结果集处理不当、无分页返回大量数据、无限递归导致栈溢出等。 
                                   6. 对于空指针：只有代码执行逻辑不自洽的空指针才需你评审
-                                  7. 关注内容：对于删除内容无需检测只关注新增/修改内容的代码
+                                  7. 关注内容：对于删除内容无需检测只关注变更后的代码也就是+符号相关内容
                                   8. 代码冲突：检测差异代码块的冲突是否解决
+                                你所具备的能力：
+                                  1. 精通git提交/合并差异内容的分析知道哪些是后改的 同一份文件多次差异变更能根据时间自动梳理并合并最终内容来理解  
                                 级别定义补充：
-                                  严重 - 逻辑错误/安全隐患/资源泄漏/并发问题导致系统崩溃/数据泄露/性能灾难/循环嵌套深度>3/递归调用逻辑的终止条件/循环中调用接口或数据库
-                                  优化 - SQL性能缺陷/可预见的性能瓶颈/大数据量的查询/资源浪费
+                                  严重 - 逻辑错误/安全隐患/资源泄漏/并发问题导致系统崩溃/数据泄露/性能灾难/循环嵌套深度>3/递归调用逻辑无终止条件/循环中调用接口或数据库
+                                  优化 - SQL性能缺陷/因逻辑设计造成的性能瓶颈/大数据量的查询/资源浪费/明显可简化的嵌套逻辑层级
                                   建议 - 代码风格/可读性/冗余代码/潜在风险点
                                   普通 - 命名规范/空行/日志打印/格式美化/远程调用的超时控制和重试机制  
                                 输出规则： 
-                                  - 仅列出严重/优化，或影响系统运行、安全、性能的问题。简要说明其影响，并给出优化建议
+                                  - 忽略普通问题仅列出严重/优化，或影响系统运行、安全、性能、可读性的问题。简要说明其影响，并给出优化建议
                                   - 不输出无关紧要的内容（如命名规范、空行、日志打印、格式美化）
                                   - 若无问题，请直接回复："没问题" 
                                   - 禁止使用任何 Markdown 格式 
                                   - 不添加任何前缀或后缀内容，如“问题如下：”、“建议：”等 
-                                  - 如果有多个问题，每个问题单独成行，按编号顺序列出即可`
+                                  - 如果有多个问题，每个问题单独成行，按编号顺序换行多列出即可`
         }
         this.systemPrompt = llmChatPrompt
-        console.log('llmChat >>>>>> prompt: ', llmChatPrompt)
-        console.log('llmChat >>>>>> modelName: ', modelName)
-        console.log('llmChat >>>>>> temperature: ', temperature)
+        step.info(`llmChat >>>>>> modelName: ${modelName} temperature: ${temperature}`)
+        step.info(`llmChat >>>>>> prompt: ${llmChatPrompt}`)
     }
 
     /**
@@ -88,12 +89,14 @@ export class Chat {
         const prompt = `请对以下代码变更进行审查：
                     【文件名】：
                      ${fileName}
+                     
+                   【变更后文件内容】:
+                    ${fileContent}
                       
                     【待审查代码块】：
                      ${hunksDiff}
-                   `
-
-        step.info(`llmChat Reviewer >>>>>> 开始评审 file: ${fileName} 差异代码：${hunksDiff}`)
+                   `;
+        step.info(`llmChat Reviewer >>>>>> 开始评审 file: ${fileName} 差异数：${hunks.length}`)
 
         try {
             const completion = await this.retryableCompletionCall(prompt)
@@ -160,4 +163,6 @@ export class Chat {
         // 如果超过最大重试次数，抛出错误
         throw new Error(`429 You exceeded your current quota, please check your plan and billing details. For more information on this error, read the docs: https://help.aliyun.com/zh/dashscope/developer-reference/tongyi-thousand-questions-metering-and-billing. Max retries exceeded: ${maxRetries}`)
     }
+
+
 }
