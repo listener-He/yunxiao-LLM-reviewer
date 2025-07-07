@@ -64,9 +64,8 @@ export class Chat {
                                   - 如果有多个问题，每个问题单独成行，按编号顺序换行多列出即可`
         }
         this.systemPrompt = llmChatPrompt
-        console.log('llmChat >>>>>> prompt: ', llmChatPrompt)
-        console.log('llmChat >>>>>> modelName: ', modelName)
-        console.log('llmChat >>>>>> temperature: ', temperature)
+        step.info(`llmChat >>>>>> modelName: ${modelName} temperature: ${temperature}`)
+        step.info(`llmChat >>>>>> prompt: ${llmChatPrompt}`)
     }
 
     /**

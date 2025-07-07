@@ -253,7 +253,7 @@ class CodeupClient {
             // content base64
             return Buffer.from(response.data.content, 'base64').toString('utf-8')
         } catch (error) {
-            console.error(`Query ref: ${ref} fileContent path: ${filePath} Error fetching file ${filePath} blob:`, error)
+            step.error(`Query ref: ${ref} fileContent path: ${filePath} Error fetching file ${filePath} blob: ${error}`, )
             return "";
         }
     }
@@ -398,7 +398,7 @@ class CodeupClient {
             step.info(`Has Commented on ${r.fileName}, line: ${r.lineNumber}:\n${escapedComment}`)
         } catch (error) {
             // 输出错误信息到控制台，并抛出错误，以便调用者处理
-            console.error('Error fetching diff patches:', error)
+            step.error(`Error fetching diff ${r.fileName} patches: ${error}`)
             throw error
         }
     }
