@@ -99,7 +99,7 @@ export class Chat {
         step.info(`llmChat Reviewer >>>>>> 开始评审 file: ${fileName} 差异数：${hunks.length}`)
 
         try {
-            const completion = await this.retryableCompletionCall(prompt)
+            const completion = await this.retryableCompletionCall(prompt, fileName)
             const content = completion.choices[0].message.content?.trim() || ''
 
             if (content && content !== '没问题') {
@@ -122,10 +122,11 @@ export class Chat {
      * 尝试调用OpenAI的chat completions API，并在遇到速率限制错误时自动重试
      *
      * @param prompt 用户提供的提示信息，用于生成chat completion
+     * @param fileName 文件名，用于在错误信息中显示
      * @returns 返回一个Promise，解析为ChatCompletion对象
      * @throws 当超过最大重试次数或遇到非速率限制错误时，抛出错误
      */
-    private async retryableCompletionCall(prompt: string): Promise<ChatCompletion> {
+    private async retryableCompletionCall(prompt: string, fileName: string): Promise<ChatCompletion> {
         // 最大重试次数设置为3次
         const maxRetries = 3
         // 初始延迟 10秒，单位毫秒
@@ -155,13 +156,13 @@ export class Chat {
                 // 计算重试延迟时间，使用指数退避策略
                 const delay = Math.pow(3, attempt) * baseDelay // 指数增长：10s -> 30s -> 90s
                 // 记录重试信息和延迟时间
-                step.error(`llmChat Reviewer >>>>>> 请求被限流，第 ${attempt + 1} 次重试，将在 ${delay / 1000} 秒后重试...`)
+                step.error(`llmChat Reviewer >>>>>> ${fileName} 请求被限流，第 ${attempt + 1} 次重试，将在 ${delay / 1000} 秒后重试...`)
                 // 等待延迟时间，然后进行下一次尝试
                 await new Promise(resolve => setTimeout(resolve, delay))
             }
         }
         // 如果超过最大重试次数，抛出错误
-        throw new Error(`429 You exceeded your current quota, please check your plan and billing details. For more information on this error, read the docs: https://help.aliyun.com/zh/dashscope/developer-reference/tongyi-thousand-questions-metering-and-billing. Max retries exceeded: ${maxRetries}`)
+        throw new Error(`429 You exceeded your current quota, please check your plan and billing details. For more information on this error, read the docs: https://help.aliyun.com/zh/dashscope/developer-reference/tongyi-thousand-questions-metering-and-billing. Max retries exceeded: ${maxRetries} for ${fileName}`)
     }
 
 
