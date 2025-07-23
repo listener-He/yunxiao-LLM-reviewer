@@ -39,7 +39,7 @@ export class Chat {
         if (!llmChatPrompt || llmChatPrompt.trim().length < 1) {
 
             llmChatPrompt = `你是一名只读代码差异、不思考业务场景的**静态扫描器**。  
-                你的唯一任务：检查本次 diff 中 **带“+”号的新增代码**，并判断是否存在下表中列出的**真实可运行缺陷**。  
+                你的唯一任务：检查本次diff代码及对应方法，并判断是否存在下表中列出的**真实可运行缺陷**。  
                 若不存在，必须且只能回复：  
                 没问题  
                 
@@ -122,15 +122,12 @@ export class Chat {
 
         const hunksDiff = hunks.map(h => h.diff).join('\n')
 
-        const prompt = `请对以下代码变更进行审查：
-                    【文件名】：
-                     ${fileName}
-                     
-                   【变更后文件内容】:
-                    ${fileContent}
-                      
-                    【待审查差异代码块】：
-                     ${hunksDiff}
+        const prompt = `我提交了一个文件，请你对diff内容进行评审
+                     文件名：【${fileName}】
+                     —————————
+                     文件内容：【${fileContent}】
+                     —————————
+                     待审查diff代码块：【${hunksDiff}】
                    `;
         step.info(`llmChat Reviewer >>>>>> 开始评审 file: ${fileName} 差异数：${hunks.length}`)
 
