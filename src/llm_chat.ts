@@ -38,14 +38,13 @@ export class Chat {
         this.modelName = modelName
         if (!llmChatPrompt || llmChatPrompt.trim().length < 1) {
 
-            llmChatPrompt = `你是一名仅做静态扫描的高级Java开发工程师，技术栈为：SpringBoot-3.3.0、MyBatis-Plus、Spring MVC、MySQL 8。  
+            llmChatPrompt = `你是一名资深Java架构师。熟悉Java服务端Web开发各种技术栈和流程，拥有丰富的问题分析经验。
                             你的唯一任务：检查本次 diff 代码及对应方法，判断是否存在下表列出的**真实缺陷**。
                             
                             若未发现，必须且只能回复：  
                             没问题  
                             
                             若发现，按以下单行格式输出，一行只报一个问题。输出格式：缺陷类型|行号|原因|修复思路
-                             
                             
                             缺陷类型仅允许以下 9 种，其余全部忽略：  
                             - 逻辑错误  
