@@ -57,7 +57,7 @@ export class Chat {
                             
                             注意：  
                             - 忽略调用者已校验的参数、外部配置、历史代码。  
-                            - 忽略“可能”“建议”级别问题。  
+                            - 忽略“可能”这种假设级别问题。  
                             - 未发现任何缺陷时，仅回复：没问题`
         }
         this.systemPrompt = llmChatPrompt
