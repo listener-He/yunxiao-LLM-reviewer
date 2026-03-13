@@ -37,10 +37,10 @@ export class Chat {
                 ? temperature
                 : 0.2
         this.modelName = modelName
-        
+
         // If llmChatPrompt is provided, use it. Otherwise leave it empty to be determined dynamically per file.
         this.systemPrompt = llmChatPrompt || ''
-        
+
         step.info(`llmChat >>>>>> modelName: ${modelName} temperature: ${temperature}`)
         if (this.systemPrompt) {
              step.info(`llmChat >>>>>> User defined prompt: ${this.systemPrompt}`)
@@ -120,7 +120,7 @@ export class Chat {
 
                  return [new ReviewResult(fileName, lineNumber, content)];
             }
-            
+
             return null;
 
         } catch (error) {
