@@ -2,6 +2,7 @@ import OpenAI from 'openai'
 import {ChatCompletion} from 'openai/resources'
 import {Hunk} from './code_review_patch'
 import * as step from '@flow-step/step-toolkit'
+import {getLanguageFromExtension, getPromptForLanguage} from './prompts'
 
 export class ReviewResult {
     fileName: string
@@ -36,33 +37,16 @@ export class Chat {
                 ? temperature
                 : 0.2
         this.modelName = modelName
-        if (!llmChatPrompt || llmChatPrompt.trim().length < 1) {
-
-            llmChatPrompt = `你是一名资深 Java 架构师与性能调优专家，负责执行严格的 Code Review。  
-                            任务：从下列 12 类“真实缺陷”中，找出本次改动后确实会触发的缺陷；未触发则直接回复“没问题”。
-                            请基于“可见即审”原则输出结论，如果是因上下文缺失而无法确认的假设请直接假设已由外部保证。  
-                            
-                            缺陷类型（仅 12 种）：  
-                            逻辑错误|安全隐患|资源泄漏|并发问题|SQL性能优化|循环操作数据库|Redis滥用|可读性差|缓存维护不严谨｜循环复杂度｜O(n²)时间复杂度｜不必要的数据库查询、循环内不必要的操作等
-                            
-                            输出规则：  
-                            1. 一行只报一个问题，格式：缺陷类型|行号|原因|修复思路。多个问题使用换行拼接
-                            2. 行号用 diff 中实际新增/修改行的数字。  
-                            3. 原因必须引用**具体代码片段**，禁止泛化。  
-                            4. 修复思路给出最小可落地的改动，禁止解释背景。  
-                            
-                            示例（正确）：  
-                            循环操作数据库|42|for(User u:list){userMapper.selectById(u.getId())}|改为userMapper.selectBatchIds(list)后分组  
-                            可读性差|88|if(a){if(b){if(c){if(d){...}}}}|提前return，减少嵌套  
-                            
-                            注意：  
-                            - 忽略调用者已校验的参数、外部配置。  
-                            - 忽略“可能”这种假设级别问题。  
-                            - 未发现任何缺陷时，仅回复：没问题`
-        }
-        this.systemPrompt = llmChatPrompt
+        
+        // If llmChatPrompt is provided, use it. Otherwise leave it empty to be determined dynamically per file.
+        this.systemPrompt = llmChatPrompt || ''
+        
         step.info(`llmChat >>>>>> modelName: ${modelName} temperature: ${temperature}`)
-        step.info(`llmChat >>>>>> prompt: ${llmChatPrompt}`)
+        if (this.systemPrompt) {
+             step.info(`llmChat >>>>>> User defined prompt: ${this.systemPrompt}`)
+        } else {
+             step.info(`llmChat >>>>>> No user defined prompt, will use dynamic language-specific prompts.`)
+        }
     }
 
     /**
@@ -73,9 +57,9 @@ export class Chat {
      * @param fileContent 原文件内容内容，用于提供代码变更的上下文
      * @param fileName 文件名，用于在审查过程中指明具体文件
      * @param hunks 代码变更块（hunks）的数组，每个元素包含具体的变更内容
-     * @returns 返回一个Promise，解析为ReviewResult对象或null如果审查没有发现问题或问题不严重
+     * @returns 返回一个Promise，解析为ReviewResult对象数组或null如果审查没有发现问题或问题不严重
      */
-    async reviewCode(fileContent: string, fileName: string, hunks: Hunk[]): Promise<ReviewResult | null> {
+    async reviewCode(fileContent: string, fileName: string, hunks: Hunk[]): Promise<ReviewResult[] | null> {
         if (!hunks || hunks.length === 0) {
             step.error(`llmChat Reviewer >>>>>> 评审警告: file: ${fileName} hunks为空，无法获取行号`)
             return null
@@ -92,23 +76,56 @@ export class Chat {
                    `;
         step.info(`llmChat Reviewer >>>>>> 开始评审 file: ${fileName} 差异数：${hunks.length}`)
 
+        const language = getLanguageFromExtension(fileName);
+        const systemPrompt = this.systemPrompt && this.systemPrompt.trim().length > 0
+            ? this.systemPrompt
+            : getPromptForLanguage(language);
+
         try {
-            const completion = await this.retryableCompletionCall(prompt, fileName)
+            const completion = await this.retryableCompletionCall(prompt, fileName, systemPrompt)
             const content = completion.choices[0].message.content?.trim() || ''
 
-            if (content && content !== '没问题') {
-                const lineNumber = hunks.length === 1
-                    ? hunks[0].lineNumber
-                    : hunks[Math.floor(hunks.length / 2)].lineNumber
-
-                return new ReviewResult(fileName, lineNumber, content)
-            } else {
+            if (!content || content === '没问题') {
                 step.info(`llmChat Reviewer >>>>>> 评审合格 file: ${fileName}, comment: ${content}`)
                 return null;
             }
+
+            // Try to parse JSON
+            try {
+                // Find JSON content if it's wrapped in markdown code blocks
+                let jsonContent = content;
+                const jsonBlockMatch = content.match(/```json\s*([\s\S]*?)\s*```/);
+                if (jsonBlockMatch) {
+                    jsonContent = jsonBlockMatch[1];
+                }
+
+                const issues = JSON.parse(jsonContent);
+                if (Array.isArray(issues)) {
+                    const results: ReviewResult[] = [];
+                    for (const issue of issues) {
+                        const { type, line, content: issueContent, suggestion } = issue;
+                        if (type && line && suggestion) {
+                             const comment = `**[${type}]**\n${issueContent}\n\n**修复建议：**\n${suggestion}`;
+                             results.push(new ReviewResult(fileName, line, comment));
+                        }
+                    }
+                    return results.length > 0 ? results : null;
+                }
+            } catch (e) {
+                step.info(`llmChat Reviewer >>>>>> JSON parsing failed, falling back to raw content. Error: ${e}`);
+                // Fallback to legacy parsing if JSON fails (e.g. if user provided a custom prompt that doesn't output JSON)
+                 const lineNumber = hunks.length === 1
+                    ? hunks[0].lineNumber
+                    : hunks[Math.floor(hunks.length / 2)].lineNumber
+
+                 return [new ReviewResult(fileName, lineNumber, content)];
+            }
+            
+            return null;
+
         } catch (error) {
             step.error(`llmChat Reviewer >>>>>> 评审异常 file: ${fileName}, error: ${error}`);
-            return new ReviewResult(fileName, hunks[0].lineNumber, '模型审核异常,请人工处理');
+            return [new ReviewResult(fileName, hunks[0].lineNumber, '模型审核异常,请人工处理')];
         }
     }
 
@@ -117,10 +134,11 @@ export class Chat {
      *
      * @param prompt 用户提供的提示信息，用于生成chat completion
      * @param fileName 文件名，用于在错误信息中显示
+     * @param systemPrompt 系统提示词
      * @returns 返回一个Promise，解析为ChatCompletion对象
      * @throws 当超过最大重试次数或遇到非速率限制错误时，抛出错误
      */
-    private async retryableCompletionCall(prompt: string, fileName: string): Promise<ChatCompletion> {
+    private async retryableCompletionCall(prompt: string, fileName: string, systemPrompt: string): Promise<ChatCompletion> {
         // 最大重试次数设置为3次
         const maxRetries = 3
         // 初始延迟 10秒，单位毫秒
@@ -133,7 +151,7 @@ export class Chat {
                 return await this.openai.chat.completions.create({
                     model: this.modelName,
                     messages: [
-                        {role: 'system', content: this.systemPrompt},
+                        {role: 'system', content: systemPrompt},
                         {role: 'user', content: prompt}
                     ],
                     temperature: this.temperature,

@@ -62,15 +62,26 @@ const codeReview = async (params: IParams) => {
     // 对每个文件的差异进行代码审查，并发布评论
     const promises = Object.entries(hunksByFile).map(async ([fileName, hunks]) => {
         return limit(async () => {
-            const afterFileContent = await mrClient.getFileBlob(fileName, mergeRequestDetail.sourceBranch)
-            // 使用AI辅助审查代码，并获取审查结果 // compareResult.getCombinedDiff()
-            const result = await dashscopeChat.reviewCode(afterFileContent, fileName, hunks)
-            // 如果审查结果为空，则不执行任何操作
-            if (!result) {
-                return
+            try {
+                const afterFileContent = await mrClient.getFileBlob(fileName, mergeRequestDetail.sourceBranch)
+                // 使用AI辅助审查代码，并获取审查结果 // compareResult.getCombinedDiff()
+                const results = await dashscopeChat.reviewCode(afterFileContent, fileName, hunks)
+                // 如果审查结果为空，则不执行任何操作
+                if (!results || results.length === 0) {
+                    return
+                }
+
+                for (const result of results) {
+                    try {
+                        // 将审查结果作为评论发布到合并请求中
+                        await mrClient.commentOnMR(result, crPatches.fromPatchSetId(), crPatches.toPatchSetId())
+                    } catch (commentError) {
+                        step.error(`Failed to post comment for file ${fileName} at line ${result.lineNumber}: ${commentError}`)
+                    }
+                }
+            } catch (err) {
+                step.error(`Error reviewing file ${fileName}: ${err}`)
             }
-            // 将审查结果作为评论发布到合并请求中
-            await mrClient.commentOnMR(result, crPatches.fromPatchSetId(), crPatches.toPatchSetId())
         })
     })
 

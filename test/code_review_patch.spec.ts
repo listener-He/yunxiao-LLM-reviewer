@@ -196,4 +196,59 @@ describe('CompareResult', () => {
             expect(result.getHunks()[2].lineNumber).to.equal(25)
         })
     })
+
+    describe('Language Specific Cases', () => {
+        it('Python: should handle indentation changes correctly', () => {
+            const patchDiff = new PatchDiff()
+            patchDiff.diff = '--- a/main.py\n' +
+                '+++ b/main.py\n' +
+                '@@ -10,4 +10,5 @@\n' +
+                ' def hello():\n' +
+                '     print("hello")\n' +
+                '-    return True\n' +
+                '+    return False\n' +
+                '+    # added comment'
+            const result = new CompareResult('', [patchDiff])
+            // Line 10: def hello()
+            // Line 11:     print("hello")
+            // Line 12: +    return False (First addition)
+            expect(result.getHunks()[0].lineNumber).to.equal(12)
+        })
+
+        it('Go: should handle struct field additions', () => {
+            const patchDiff = new PatchDiff()
+            patchDiff.diff = '--- a/user.go\n' +
+                '+++ b/user.go\n' +
+                '@@ -5,3 +5,4 @@ type User struct {\n' +
+                '     Name string\n' +
+                '     Age  int\n' +
+                '+    Email string\n' +
+                ' }'
+            const result = new CompareResult('', [patchDiff])
+            // Line 5: type User struct {
+            // Line 6:     Name string
+            // Line 7:     Age  int
+            // Line 8: +    Email string
+            expect(result.getHunks()[0].lineNumber).to.equal(8)
+        })
+
+        it('Vue: should handle template changes', () => {
+            const patchDiff = new PatchDiff()
+            patchDiff.diff = '--- a/App.vue\n' +
+                '+++ b/App.vue\n' +
+                '@@ -2,4 +2,5 @@\n' +
+                ' <template>\n' +
+                '   <div id="app">\n' +
+                '-    <img alt="Vue logo" src="./assets/logo.png">\n' +
+                '+    <Header />\n' +
+                '     <HelloWorld msg="Welcome to Your Vue.js App"/>\n' +
+                '   </div>'
+            const result = new CompareResult('', [patchDiff])
+            // Line 2: <template>
+            // Line 3:   <div id="app">
+            // Line 4: +    <Header /> (First addition)
+            expect(result.getHunks()[0].lineNumber).to.equal(4)
+        })
+    })
 })
+
